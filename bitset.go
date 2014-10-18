@@ -32,7 +32,6 @@ func (b Bitset) ToIndexes(indices []int) []int {
 		for i := uint64(0); i < 64; i++ {
 			if el&(1<<i) != 0 {
 				indices[dest] = pos*64 + int(i)
-				fmt.Printf("indices[%d] = %d\n", dest, indices[dest])
 				dest++
 			}
 		}
@@ -52,19 +51,31 @@ func (b Bitset) NumSetBits() int {
 	return count
 }
 
+func (b *Bitset) Reset() {
+	for i := 0; i < len(b.binary); i++ {
+		b.binary[i] = uint64(0)
+	}
+}
+
 func (b *Bitset) Set(indices []int) {
+	if len(indices) == 0 {
+		return
+	}
 	idx := 0
 	for pos, el := range b.binary {
+		if idx >= len(indices) {
+			continue
+		}
 		if indices[idx] > b.Len() {
 			panic(fmt.Sprintf(
 				"index %v is larger than the length of this bitset (length=%v",
 				indices[idx], b.Len()))
 		}
-		el = 0
 		min_idx, max_idx := pos*64, (pos+1)*64
 		for ; idx < len(indices) &&
 			indices[idx] >= min_idx &&
 			indices[idx] < max_idx; idx++ {
+			fmt.Printf("Set(%d) = 1\n", indices[idx])
 			el |= 1 << uint64(indices[idx]-min_idx)
 		}
 		b.binary[pos] = el

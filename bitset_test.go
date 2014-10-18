@@ -45,6 +45,23 @@ func TestConstruction(t *testing.T) {
 	ExpectEquals(t, "three.binary.length", 3, len(three.binary))
 }
 
+func TestSetVersusOr(t *testing.T) {
+	b := NewBitset(2048)
+
+	b.Set([]int{127})
+	ExpectEquals(t, "bit 127", true, b.IsSet(127))
+
+	b.Set([]int{11, 12})
+	ExpectEquals(t, "bit 127", true, b.IsSet(127))
+	ExpectEquals(t, "num bits", 3, b.NumSetBits())
+
+	b.Reset()
+	ExpectEquals(t, "bit 127", false, b.IsSet(127))
+
+	b.Set([]int{222, 444, 888, 1023, 1024, 1331, 2047})
+	ExpectEquals(t, "num bits", 7, b.NumSetBits())
+}
+
 func TestLocate(t *testing.T) {
 	b := NewBitset(128)
 
