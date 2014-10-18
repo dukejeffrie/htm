@@ -45,6 +45,7 @@ func (b Bitset) NumSetBits() int {
 	count := 0
 	for _, el := range b.binary {
 		for ; el != 0; count++ {
+			// Clear the least significant bit.
 			el &= el - 1
 		}
 	}

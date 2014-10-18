@@ -4,6 +4,7 @@ package htm
 
 import "fmt"
 import "testing"
+import "math/rand"
 
 func ExpectEquals(t *testing.T, message string, expected interface{}, actual interface{}) {
 	if expected != actual {
@@ -73,4 +74,36 @@ func TestIndexing(t *testing.T) {
 
 	sl := make([]int, 10)
 	ExpectContentEquals(t, "indices 1 and 3", []int{1, 3}, b.ToIndexes(sl))
+}
+
+func BenchmarkSet64(b *testing.B) {
+	rand.Seed(int64(b.N))
+	bitset := NewBitset(64)
+	bits_to_set := []int{rand.Intn(64), rand.Intn(64), rand.Intn(64)}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		bitset.Set(bits_to_set)
+	}
+}
+
+func BenchmarkSet128(b *testing.B) {
+	rand.Seed(int64(b.N))
+	bitset := NewBitset(128)
+	bits_to_set := []int{rand.Intn(128), rand.Intn(128), rand.Intn(128),
+		rand.Intn(128), rand.Intn(128), rand.Intn(128)}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		bitset.Set(bits_to_set)
+	}
+}
+
+func BenchmarkSet2048(b *testing.B) {
+	rand.Seed(int64(b.N))
+	bitset := NewBitset(2048)
+	bits_to_set := []int{rand.Intn(2048), rand.Intn(2048), rand.Intn(2048),
+		rand.Intn(2048), rand.Intn(2048), rand.Intn(2048)}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		bitset.Set(bits_to_set)
+	}
 }
