@@ -81,7 +81,6 @@ func TestIndexing(t *testing.T) {
 	b := NewBitset(64)
 	b.Set([]int{1, 3})
 
-	ExpectEquals(t, "bits 1 and 3", "1010", b.String())
 	ExpectEquals(t, "first integer", uint64(8+2), b.binary[0])
 
 	ExpectEquals(t, "bit 1", true, b.IsSet(1))

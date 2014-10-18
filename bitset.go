@@ -83,15 +83,29 @@ func (b *Bitset) Set(indices []int) {
 }
 
 func (b Bitset) String() string {
-	s := make([]string, len(b.binary))
-	for i, v := range b.binary {
-		s[i] = fmt.Sprintf("%b", v)
+	indices := make([]int, b.NumSetBits())
+	indices = b.ToIndexes(indices)
+	s := make([]string, len(indices))
+	for i, v := range indices {
+		s[i] = fmt.Sprintf("%04d", v)
 	}
-	return strings.Join(s, " ")
+	return "[" + strings.Join(s, ",") + "]"
 }
 
 func (b Bitset) Len() int {
 	return b.length
+}
+
+func (b Bitset) Equals(other Bitset) bool {
+	if b.Len() != other.Len() {
+		return false
+	}
+	for i, v := range b.binary {
+		if v != other.binary[i] {
+			return false
+		}
+	}
+	return true
 }
 
 // Creates a new bitset with enough storage for at least the given number of bits.
