@@ -86,22 +86,22 @@ func (b *Bitset) SetRange(start, end int) {
 	if end <= start {
 		return
 	}
-	idx := start
 	for pos, el := range b.binary {
-		if idx >= end {
+		min_idx, max_idx := pos*64, (pos+1)*64
+		if start > max_idx {
+			continue
+		}
+		if end <= min_idx {
 			return
 		}
-		if idx > b.Len() {
-			panic(fmt.Sprintf(
-				"index %v is larger than the length of this bitset (length=%v",
-				idx, b.Len()))
+		mask := ^uint64(0)
+		if start > min_idx {
+			mask = mask << uint64(start-min_idx)
 		}
-		min_idx, max_idx := pos*64, (pos+1)*64
-		// TODO(tms): optimize.
-		for ; idx < end && idx >= min_idx && idx < max_idx; idx++ {
-			el |= 1 << uint64(idx-min_idx)
+		if end < max_idx {
+			mask &= ^uint64(0) >> uint64(max_idx-end)
 		}
-		b.binary[pos] = el
+		b.binary[pos] = el | mask
 	}
 }
 
