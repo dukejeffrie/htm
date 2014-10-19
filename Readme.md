@@ -29,9 +29,15 @@ The usefulness of bursting is in anomaly detection: the ratio of bursting column
 * Classifier: keeps a histogram of output value per input value, tring to predict which value will appear two steps ahead.
     For scalars, the classifier also keeps a granularization table: each bucket of discretized values from the sensor region keeps a moving average of values that appeared for that bucket.
 
-### Dense binary matrix
-- stores the indices of non-zero entries in a sparse matrix.
+### Potential pool
 
+The potential pool is the set of all inputs that are within a column's reach. There are no connections between a column and inputs outside its potential pool.
+
+The potential pool can be represented as a per-column map of input index to permanence weight. Since a column is typically connected to a small subset of the inputs, the map is mostly empty. The original system stores binary connections, which has a tradeoff of a smaller map to iterate when computing each step, but still needs the permanence weights for learning.
+
+Two major operations take place in the potential pool. One is determining the overlap between an input and the connected columns (i.e. which columns that have a permanence above a threshold T). Because inputs are stored as Bitsets, this can be done efficiently if the connected columns are represented as a Bitset as well, so we can perform an AND operation between the two. If memory allocation for the indices vector is done carefully, this could work very well.
+
+The second operation is learning, which would require going through the input AND NOT connected for increments, and connected AND NOT input for decrements. Might be that iterating on the input once and checking bits individually works better.
 
 ### Region
 A region is a named set of one or more identical nodes. Multiple regions can belong to a network.
@@ -47,7 +53,7 @@ A region is a named set of one or more identical nodes. Multiple regions can bel
 
 ### Inputs and Outputs
 
-Inputs and Outputs are named
+Inputs and Outputs are named.
 
 ### Encoders
 https://www.youtube.com/watch?v=3gjVVNPnPYA&feature=youtu.be&t=2m40s
