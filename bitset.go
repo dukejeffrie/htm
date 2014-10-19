@@ -6,6 +6,7 @@ package htm
 
 import "fmt"
 import "strings"
+import "sort"
 
 // A bitset type.
 type Bitset struct {
@@ -15,14 +16,8 @@ type Bitset struct {
 	length int
 }
 
-func (b Bitset) locate(index int) (pos, offset int) {
-	pos = index / 64
-	offset = index % 64
-	return
-}
-
 func (b Bitset) IsSet(index int) bool {
-	pos, offset := b.locate(index)
+	pos, offset := index/64, index%64
 	return b.binary[pos]&(1<<uint64(offset)) != 0
 }
 
@@ -61,6 +56,7 @@ func (b *Bitset) Set(indices []int) {
 	if len(indices) == 0 {
 		return
 	}
+	sort.Ints(indices)
 	idx := 0
 	for pos, el := range b.binary {
 		if idx >= len(indices) {
@@ -86,11 +82,9 @@ func (b *Bitset) SetRange(start, end int) {
 	if end <= start {
 		return
 	}
-	for pos, el := range b.binary {
+	pos := start / 64
+	for pos < len(b.binary) {
 		min_idx, max_idx := pos*64, (pos+1)*64
-		if start > max_idx {
-			continue
-		}
 		if end <= min_idx {
 			return
 		}
@@ -101,8 +95,14 @@ func (b *Bitset) SetRange(start, end int) {
 		if end < max_idx {
 			mask &= ^uint64(0) >> uint64(max_idx-end)
 		}
-		b.binary[pos] = el | mask
+		b.binary[pos] |= mask
+		pos++
 	}
+}
+
+func (b *Bitset) SetOne(index int) {
+	pos, offset := index/64, index%64
+	b.binary[pos] |= 1 << uint64(offset)
 }
 
 func (b Bitset) String() string {

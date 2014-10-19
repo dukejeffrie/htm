@@ -60,6 +60,8 @@ func TestSetAndReset(t *testing.T) {
 
 	b.Set([]int{222, 444, 888, 1023, 1024, 1331, 2047})
 	ExpectEquals(t, "num bits", 7, b.NumSetBits())
+	b.SetOne(111)
+	ExpectEquals(t, "bit 111", true, b.IsSet(111))
 }
 
 func TestSetRange(t *testing.T) {
@@ -69,21 +71,6 @@ func TestSetRange(t *testing.T) {
 	ExpectEquals(t, "num bits", 154-8, b.NumSetBits())
 	for i := 8; i < 154; i++ {
 		ExpectEquals(t, fmt.Sprintf("bit %d", i), true, b.IsSet(i))
-	}
-}
-
-func TestLocate(t *testing.T) {
-	b := NewBitset(128)
-
-	for i := 0; i < 64; i++ {
-		pos, off := b.locate(i)
-		ExpectEquals(t, fmt.Sprintf("pos[%d]", i), 0, pos)
-		ExpectEquals(t, fmt.Sprintf("off[%d]", i), i, off)
-	}
-	for i := 64; i < 128; i++ {
-		pos, off := b.locate(i)
-		ExpectEquals(t, fmt.Sprintf("pos[%d]", i), 1, pos)
-		ExpectEquals(t, fmt.Sprintf("off[%d]", i), i-64, off)
 	}
 }
 
@@ -102,36 +89,47 @@ func TestIndexing(t *testing.T) {
 	ExpectContentEquals(t, "indices 1 and 3", []int{1, 3}, b.ToIndexes(sl))
 }
 
-func BenchmarkSet64(b *testing.B) {
+func SetBenchmarkTemplate(b *testing.B, n, l int) {
 	rand.Seed(int64(b.N))
-	bitset := NewBitset(64)
-	bits_to_set := []int{rand.Intn(64), rand.Intn(64), rand.Intn(64)}
+	bitset := NewBitset(n)
+	bits_to_set := make([]int, l)
+	for i := 0; i > l; i++ {
+		bits_to_set[i] = rand.Intn(n)
+	}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		bitset.Set(bits_to_set)
 	}
 }
 
-func BenchmarkSet128(b *testing.B) {
+func BenchmarkSet10(b *testing.B) {
+	SetBenchmarkTemplate(b, 2048, 10)
+}
+func BenchmarkSet100(b *testing.B) {
+	SetBenchmarkTemplate(b, 2048, 100)
+}
+func BenchmarkSet1000(b *testing.B) {
+	SetBenchmarkTemplate(b, 2048, 1000)
+}
+
+func SetOneBenchmarkTemplate(b *testing.B, n, w int) {
 	rand.Seed(int64(b.N))
-	bitset := NewBitset(128)
-	bits_to_set := []int{rand.Intn(128), rand.Intn(128), rand.Intn(128),
-		rand.Intn(128), rand.Intn(128), rand.Intn(128)}
+	bitset := NewBitset(n)
+	start := rand.Intn(n)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		bitset.Set(bits_to_set)
+		bitset.SetOne(start)
 	}
 }
 
-func BenchmarkSet2048(b *testing.B) {
-	rand.Seed(int64(b.N))
-	bitset := NewBitset(2048)
-	bits_to_set := []int{rand.Intn(2048), rand.Intn(2048), rand.Intn(2048),
-		rand.Intn(2048), rand.Intn(2048), rand.Intn(2048)}
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		bitset.Set(bits_to_set)
-	}
+func BenchmarkSetOne10(b *testing.B) {
+	SetOneBenchmarkTemplate(b, 2048, 10)
+}
+func BenchmarkSetOne100(b *testing.B) {
+	SetOneBenchmarkTemplate(b, 2048, 100)
+}
+func BenchmarkSetOne1000(b *testing.B) {
+	SetOneBenchmarkTemplate(b, 2048, 1000)
 }
 
 func SetRangeBenchmarkTemplate(b *testing.B, n, w int) {
