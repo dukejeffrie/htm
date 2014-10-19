@@ -45,7 +45,7 @@ func TestConstruction(t *testing.T) {
 	ExpectEquals(t, "three.binary.length", 3, len(three.binary))
 }
 
-func TestSetVersusOr(t *testing.T) {
+func TestSetAndReset(t *testing.T) {
 	b := NewBitset(2048)
 
 	b.Set([]int{127})
@@ -60,6 +60,16 @@ func TestSetVersusOr(t *testing.T) {
 
 	b.Set([]int{222, 444, 888, 1023, 1024, 1331, 2047})
 	ExpectEquals(t, "num bits", 7, b.NumSetBits())
+}
+
+func TestSetRange(t *testing.T) {
+	b := NewBitset(2048)
+	b.SetRange(8, 154)
+
+	ExpectEquals(t, "num bits", 154-8, b.NumSetBits())
+	for i := 8; i < 154; i++ {
+		ExpectEquals(t, fmt.Sprintf("bit %d", i), true, b.IsSet(i))
+	}
 }
 
 func TestLocate(t *testing.T) {
@@ -122,4 +132,24 @@ func BenchmarkSet2048(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		bitset.Set(bits_to_set)
 	}
+}
+
+func SetRangeBenchmarkTemplate(b *testing.B, n, w int) {
+	rand.Seed(int64(b.N))
+	bitset := NewBitset(n)
+	start := rand.Intn(n - w)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		bitset.SetRange(start, w)
+	}
+}
+
+func BenchmarkSetRange10(b *testing.B) {
+	SetRangeBenchmarkTemplate(b, 2048, 10)
+}
+func BenchmarkSetRange100(b *testing.B) {
+	SetRangeBenchmarkTemplate(b, 2048, 100)
+}
+func BenchmarkSetRange1000(b *testing.B) {
+	SetRangeBenchmarkTemplate(b, 2048, 1000)
 }

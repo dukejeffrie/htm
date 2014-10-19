@@ -43,9 +43,9 @@ func NewCategoryDecoder(n, w int) (DecoderFunction, error) {
 	if n < w*4 {
 		return nil, fmt.Errorf("Cannnot create category decoder: n = %d is too small (must be at least 4 times %d)", n, w)
 	}
-	bits := make(map[uint64]Bitset)
+	bits := make(map[int]Bitset)
 	return func(in RawInput) (out Bitset, err error) {
-		key := uint64(in.IntValue)
+		key := in.IntValue
 		var ok bool
 		out, ok = bits[key]
 		if !ok {
@@ -60,5 +60,19 @@ func NewCategoryDecoder(n, w int) (DecoderFunction, error) {
 			bits[key] = out
 		}
 		return
+	}, nil
+}
+
+func NewScalarDecoder(n, w, min, max int) (DecoderFunction, error) {
+	bucket_size := (max - min) / (n - w + 1)
+	if bucket_size < 1 {
+		bucket_size = 1
+	}
+	return func(in RawInput) (out Bitset, err error) {
+		val := in.IntValue
+		bucket := (val - min) / bucket_size
+		out = *NewBitset(n)
+		out.SetRange(bucket, bucket+w)
+		return out, nil
 	}, nil
 }

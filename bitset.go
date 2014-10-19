@@ -64,7 +64,7 @@ func (b *Bitset) Set(indices []int) {
 	idx := 0
 	for pos, el := range b.binary {
 		if idx >= len(indices) {
-			continue
+			return
 		}
 		if indices[idx] > b.Len() {
 			panic(fmt.Sprintf(
@@ -75,8 +75,31 @@ func (b *Bitset) Set(indices []int) {
 		for ; idx < len(indices) &&
 			indices[idx] >= min_idx &&
 			indices[idx] < max_idx; idx++ {
-			fmt.Printf("Set(%d) = 1\n", indices[idx])
 			el |= 1 << uint64(indices[idx]-min_idx)
+		}
+		b.binary[pos] = el
+	}
+}
+
+// Sets all bits in the interval [start, end).
+func (b *Bitset) SetRange(start, end int) {
+	if end <= start {
+		return
+	}
+	idx := start
+	for pos, el := range b.binary {
+		if idx >= end {
+			return
+		}
+		if idx > b.Len() {
+			panic(fmt.Sprintf(
+				"index %v is larger than the length of this bitset (length=%v",
+				idx, b.Len()))
+		}
+		min_idx, max_idx := pos*64, (pos+1)*64
+		// TODO(tms): optimize.
+		for ; idx < end && idx >= min_idx && idx < max_idx; idx++ {
+			el |= 1 << uint64(idx-min_idx)
 		}
 		b.binary[pos] = el
 	}

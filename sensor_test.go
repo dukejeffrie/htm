@@ -24,6 +24,13 @@ func (s *TestSource) SendColor(name string, value int) (*Input, error) {
 	return input, err
 }
 
+func (s *TestSource) SendScalar(value int) (*Input, error) {
+	s.Sink <- &RawInput{fmt.Sprint(value), value}
+	input, err := s.Next()
+	fmt.Printf("For scalar %d: %v, %v\n", value, input, err)
+	return input, err
+}
+
 func GenerateColors(n, w int) (*TestSource, error) {
 	source := make(chan *RawInput, 1)
 	decoder, err := NewCategoryDecoder(n, w)
@@ -32,6 +39,20 @@ func GenerateColors(n, w int) (*TestSource, error) {
 	}
 	delegate := &InputSource{
 		Name:    "Test Colors",
+		Decoder: decoder,
+		Source:  source,
+	}
+	return &TestSource{delegate, source}, nil
+}
+
+func GenerateScalars(n, w, min, max int) (*TestSource, error) {
+	source := make(chan *RawInput, 1)
+	decoder, err := NewScalarDecoder(n, w, min, max)
+	if err != nil {
+		return nil, err
+	}
+	delegate := &InputSource{
+		Name:    "Test Scalars",
 		Decoder: decoder,
 		Source:  source,
 	}
@@ -74,5 +95,15 @@ func TestColors(t *testing.T) {
 	t.Log(r2)
 	if !r1.Value.Equals(r2.Value) {
 		t.Errorf("red values don't match: %v != %v", r1, r2)
+	}
+}
+
+func TestScalars(t *testing.T) {
+	sink, _ := GenerateScalars(2048, 28, 0, 100)
+	s1, _ := sink.SendScalar(4)
+	b1 := NewBitset(2048)
+	b1.SetRange(4, 4+28)
+	if !s1.Value.Equals(*b1) {
+		t.Errorf("Scalar mismatch: expected %v, but got: %v", b1, s1)
 	}
 }
