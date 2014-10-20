@@ -55,3 +55,19 @@ func TestConsumeInput(t *testing.T) {
 		}
 	}
 }
+
+func BenchmarkConsumeInput(b *testing.B) {
+	// 500 columns with 4 cells each.
+	l := NewLayer("Single Layer", 500, 4)
+
+	// 2048-bit scalar input, 28 bits of real data.
+	l.ResetForInput(2048, 28)
+
+	input := NewBitset(2048)
+	input.Set(columnRand.Perm(2048)[0:28])
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		l.ConsumeInput(input)
+	}
+}

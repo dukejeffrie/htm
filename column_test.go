@@ -17,7 +17,7 @@ func TestReset(t *testing.T) {
 	}
 }
 
-func TestOverlapScore(t *testing.T) {
+func TestOverlap(t *testing.T) {
 	c := NewColumn(1)
 	connections := []int{1, 3, 5, 8, 11}
 	c.ResetConnections(connections)
@@ -28,5 +28,23 @@ func TestOverlapScore(t *testing.T) {
 	c.Overlap(input.ToIndexes(input_bits), result)
 	if result.NumSetBits() != 2 {
 		t.Errorf("Overlap score for columns 1, 5 should be 2: %v", result)
+	}
+	if score := c.Score(input_bits); result.NumSetBits() != score {
+		t.Errorf("Overlap score mismatch: %v != %v", result.NumSetBits(), score)
+	}
+}
+
+func BenchmarkOverlap(b *testing.B) {
+	c := NewColumn(1)
+	connections := []int{1, 3, 5, 8, 11}
+	c.ResetConnections(connections)
+	input_bits := make([]int, 10)
+	input := NewBitset(64)
+	input.Set([]int{1, 5, 22})
+	bits := input.ToIndexes(input_bits)
+	result := NewBitset(64)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		c.Overlap(bits, result)
 	}
 }
