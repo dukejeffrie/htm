@@ -1,4 +1,4 @@
-// A layer is a group of cells of the same hierarchy within a region.
+// A layer is a group of cells of the same hierarchy within a region. It is called "local neighborhood" in Numenta code.
 
 package htm
 

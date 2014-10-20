@@ -20,14 +20,12 @@ type TestSource struct {
 func (s *TestSource) SendColor(name string, value int) (*Input, error) {
 	s.Sink <- &RawInput{name, value}
 	input, err := s.Next()
-	fmt.Printf("For color %s(%d): %v, %v\n", name, value, input, err)
 	return input, err
 }
 
 func (s *TestSource) SendScalar(value int) (*Input, error) {
 	s.Sink <- &RawInput{fmt.Sprint(value), value}
 	input, err := s.Next()
-	fmt.Printf("For scalar %d: %v, %v\n", value, input, err)
 	return input, err
 }
 

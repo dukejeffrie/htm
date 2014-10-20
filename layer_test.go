@@ -1,13 +1,12 @@
 package htm
 
-import "fmt"
 import "testing"
 
 func TestConsumeInput(t *testing.T) {
-	// 500 columns with 4 cells each.
+	// 50 columns with 4 cells each.
 	l := NewLayer("Single Layer", 50, 4)
 
-	// 64-bit scalar input, 2 bits of real data.
+	// 64-bit input, 2 bits of real data.
 	l.ResetForInput(64, 2)
 
 	input := NewBitset(64)
@@ -18,13 +17,10 @@ func TestConsumeInput(t *testing.T) {
 	// Let's store all the top cells connections into the input bit, so we get them again the second time around.
 	next_input := NewBitset(64)
 
-	fmt.Printf("--- For input: %v", input)
 	for _, el := range l.scratch.scores {
 		col := l.columns[el.index]
-		fmt.Printf("\n\t@%d(score=%d): %v", el.index, el.score, col)
 		next_input.Or(col.Connected())
 	}
-	fmt.Println()
 	last_scores := make([]ScoredElement, l.scratch.scores.Len())
 	copy(last_scores, l.scratch.scores)
 
@@ -34,12 +30,6 @@ func TestConsumeInput(t *testing.T) {
 	}
 
 	l.ConsumeInput(next_input)
-	fmt.Printf("--- For input: %v", next_input)
-	for _, el := range l.scratch.scores {
-		col := l.columns[el.index]
-		fmt.Printf("\n\t@%d(score=%d): %v", el.index, el.score, col)
-	}
-	fmt.Println()
 	for _, old := range last_scores {
 		found := false
 		for _, el := range l.scratch.scores {
@@ -56,10 +46,7 @@ func TestConsumeInput(t *testing.T) {
 }
 
 func BenchmarkConsumeInput(b *testing.B) {
-	// 500 columns with 4 cells each.
 	l := NewLayer("Single Layer", 500, 4)
-
-	// 2048-bit scalar input, 28 bits of real data.
 	l.ResetForInput(2048, 28)
 
 	input := NewBitset(2048)
