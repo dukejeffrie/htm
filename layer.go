@@ -39,6 +39,7 @@ type Scratch struct {
 	overlap *Bitset
 	scores  TopN
 }
+
 type Layer struct {
 	columns          []*Column
 	name             string

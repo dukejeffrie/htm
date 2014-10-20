@@ -66,5 +66,4 @@ func TestLearnFromInput(t *testing.T) {
 
 	c.LearnFromInput(input, 2.0)
 	t.Log(c.permanence)
-	t.Fail()
 }

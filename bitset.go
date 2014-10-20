@@ -23,12 +23,15 @@ func (b Bitset) IsSet(index int) bool {
 
 func (b Bitset) ToIndexes(indices []int) []int {
 	dest := 0
+	base := 0
 	for pos, el := range b.binary {
-		for i := uint64(0); i < 64; i++ {
-			if el&(1<<i) != 0 {
-				indices[dest] = pos*64 + int(i)
+		base = pos * 64
+		for i := 0; el > 0; i++ {
+			if el&1 == 1 {
+				indices[dest] = base + i
 				dest++
 			}
+			el >>= 1
 		}
 	}
 	return indices[0:dest]

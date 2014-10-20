@@ -20,7 +20,7 @@ func ExpectContentEquals(t *testing.T, message string, expected []int, actual []
 	failed := false
 	for i, v := range expected {
 		if v != actual[i] {
-			t.Logf("%s (element[%d]): %v != %v", message, v, actual[i])
+			t.Logf("%s (element[%d]): %v != %v", message, i, v, actual[i])
 			failed = true
 		}
 	}
@@ -152,4 +152,31 @@ func BenchmarkSetRange100(b *testing.B) {
 }
 func BenchmarkSetRange1000(b *testing.B) {
 	SetRangeBenchmarkTemplate(b, 2048, 1000)
+}
+
+func ToIndexesBenchmarkTemplate(b *testing.B, n, l int) {
+	rand.Seed(int64(1979))
+	bitset := NewBitset(n)
+	bits_to_set := make([]int, l)
+	for i := 0; i > l; i++ {
+		bits_to_set[i] = rand.Intn(n)
+	}
+	bitset.Set(bits_to_set)
+	b.ResetTimer()
+	output := make([]int, bitset.NumSetBits())
+	for i := 0; i < b.N; i++ {
+		bitset.ToIndexes(output)
+	}
+}
+
+func BenchmarkToIndexes10(b *testing.B) {
+	ToIndexesBenchmarkTemplate(b, 2048, 10)
+}
+
+func BenchmarkToIndexes100(b *testing.B) {
+	ToIndexesBenchmarkTemplate(b, 2048, 100)
+}
+
+func BenchmarkToIndexes1000(b *testing.B) {
+	ToIndexesBenchmarkTemplate(b, 2048, 1000)
 }
