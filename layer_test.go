@@ -22,7 +22,7 @@ func TestConsumeInput(t *testing.T) {
 	for _, el := range l.scratch.scores {
 		col := l.columns[el.index]
 		fmt.Printf("\n\t@%d(score=%d): %v", el.index, el.score, col)
-		next_input.Set(col.Connected())
+		next_input.Or(col.Connected())
 	}
 	fmt.Println()
 	last_scores := make([]ScoredElement, l.scratch.scores.Len())
@@ -38,7 +38,6 @@ func TestConsumeInput(t *testing.T) {
 	for _, el := range l.scratch.scores {
 		col := l.columns[el.index]
 		fmt.Printf("\n\t@%d(score=%d): %v", el.index, el.score, col)
-		next_input.Set(col.Connected())
 	}
 	fmt.Println()
 	for _, old := range last_scores {

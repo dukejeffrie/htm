@@ -4,7 +4,6 @@ package htm
 
 import "fmt"
 import "math/rand"
-import "sort"
 
 const (
 	CONNECTION_THRESHOLD = 0.6
@@ -23,6 +22,7 @@ type Column struct {
 
 	// Permanence map
 	permanence map[int]float32
+	connected  *Bitset
 }
 
 func NewColumn(height int) *Column {
@@ -45,41 +45,22 @@ func (c Column) String() string {
 }
 
 // Gets the indices of the connected synapses. The result is in ascending order.
-func (c Column) Connected() []int {
-	result := make([]int, 0, len(c.permanence))
-	for k, v := range c.permanence {
-		if v >= CONNECTION_THRESHOLD {
-			result = append(result, k)
-		}
-	}
-	sort.Ints(result)
-	return result
+func (c Column) Connected() Bitset {
+	return *c.connected
 }
 
-func (c *Column) ResetConnections(connected []int) {
+func (c *Column) ResetConnections(num_bits int, connected []int) {
+	c.connected = NewBitset(num_bits)
 	for k, _ := range c.permanence {
 		delete(c.permanence, k)
 	}
 	for _, v := range connected {
 		c.permanence[v] = INITIAL_PERMANENCE
 	}
+	c.connected.Set(connected)
 }
 
-func (c Column) Score(input []int) int {
-	score := 0
-	for _, v := range input {
-		if c.permanence[v] >= CONNECTION_THRESHOLD {
-			score++
-		}
-	}
-	return score
-}
-
-func (c Column) Overlap(input []int, result *Bitset) {
-	result.Reset()
-	for _, v := range input {
-		if c.permanence[v] >= CONNECTION_THRESHOLD {
-			result.SetOne(v)
-		}
-	}
+func (c Column) Overlap(input Bitset, result *Bitset) {
+	result.CopyFrom(*c.connected)
+	result.And(input)
 }

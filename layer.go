@@ -77,7 +77,7 @@ func (l Layer) Width() int {
 func (l *Layer) ResetForInput(n, w int) {
 	permutation := columnRand.Perm(n)
 	for i, col := range l.columns {
-		col.ResetConnections(permutation[i : i+w])
+		col.ResetConnections(n, permutation[i:i+w])
 	}
 	if cap(l.scratch.input) < w {
 		l.scratch.input = make([]int, w)
@@ -87,11 +87,10 @@ func (l *Layer) ResetForInput(n, w int) {
 }
 
 func (l *Layer) ConsumeInput(input *Bitset) {
-	input_bits := input.ToIndexes(l.scratch.input)
 	l.scratch.scores = l.scratch.scores[0:0]
 	for i, c := range l.columns {
-		l.scratch.overlap.Reset()
-		overlap_score := c.Score(input_bits)
+		c.Overlap(*input, l.scratch.overlap)
+		overlap_score := l.scratch.overlap.NumSetBits()
 		if overlap_score > 0 {
 			heap.Push(&l.scratch.scores, ScoredElement{i, overlap_score})
 			if l.scratch.scores.Len() > l.maxFiringColumns {

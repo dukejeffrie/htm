@@ -131,6 +131,36 @@ func (b Bitset) Equals(other Bitset) bool {
 	return true
 }
 
+func (b *Bitset) CopyFrom(other Bitset) {
+	if b.Len() != other.Len() {
+		panic(fmt.Errorf(
+			"Cannot AND bitsets of different length (%d != %d)", b.Len(), other.Len()))
+	}
+	for i, v := range other.binary {
+		b.binary[i] = v
+	}
+}
+
+func (b *Bitset) Or(other Bitset) {
+	if b.Len() != other.Len() {
+		panic(fmt.Errorf(
+			"Cannot AND bitsets of different length (%d != %d)", b.Len(), other.Len()))
+	}
+	for i, v := range other.binary {
+		b.binary[i] |= v
+	}
+}
+
+func (b *Bitset) And(other Bitset) {
+	if b.Len() != other.Len() {
+		panic(fmt.Errorf(
+			"Cannot AND bitsets of different length (%d != %d)", b.Len(), other.Len()))
+	}
+	for i, v := range other.binary {
+		b.binary[i] &= v
+	}
+}
+
 // Creates a new bitset with enough storage for at least the given number of bits.
 func NewBitset(length int) *Bitset {
 	result := new(Bitset)
