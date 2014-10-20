@@ -65,7 +65,18 @@ func (c *Column) ResetConnections(connected []int) {
 	}
 }
 
-func (c Column) GetOverlap(input []int, result *Bitset) {
+func (c Column) Score(input []int) int {
+	score := 0
+	for _, v := range input {
+		if c.permanence[v] >= CONNECTION_THRESHOLD {
+			score++
+		}
+	}
+	return score
+}
+
+func (c Column) Overlap(input []int, result *Bitset) {
+	result.Reset()
 	for _, v := range input {
 		if c.permanence[v] >= CONNECTION_THRESHOLD {
 			result.SetOne(v)

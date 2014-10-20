@@ -1,49 +1,32 @@
 package htm
 
-import "fmt"
 import "testing"
 
-type Layer struct {
-	columns []*Column
-	name    string
-}
-
-// Creates a new named layer with this many columns.
-func NewLayer(name string, width, height int) *Layer {
-	result := &Layer{
-		columns: make([]*Column, width),
-		name:    name,
-	}
-	for i := 0; i < width; i++ {
-		result.columns[i] = NewColumn(height)
-	}
-	return result
-}
-
-func (l Layer) Height() int {
-	return l.columns[0].Height()
-}
-
-func (l Layer) Width() int {
-	return len(l.columns)
-}
-
-func (l *Layer) ResetForInput(n, w int) {
-	permutation := columnRand.Perm(n)
-	for i, col := range l.columns {
-		col.ResetConnections(permutation[i : i+w])
+func TestReset(t *testing.T) {
+	c := NewColumn(1)
+	connections := []int{1, 3, 5, 8, 11}
+	c.ResetConnections(connections)
+	connected := c.Connected()
+	for i, v := range connections {
+		if connected[i] != v {
+			t.Errorf("Connection mismatch: %v != %v", v, connected[i])
+		}
+		if c.permanence[v] != INITIAL_PERMANENCE {
+			t.Errorf("Initial permanence should have been set for connection %v", v)
+		}
 	}
 }
 
-func TestPotentialPool(t *testing.T) {
-	// 5 columns with 4 cells each.
-	layer0 := NewLayer("Single Layer", 5, 4)
-
-	// 64-bit scalar input, 2 bits of real data.
-	layer0.ResetForInput(64, 2)
-
-	for i, c := range layer0.columns {
-		fmt.Printf("Column %d: %v", i, c)
+func TestOverlapScore(t *testing.T) {
+	c := NewColumn(1)
+	connections := []int{1, 3, 5, 8, 11}
+	c.ResetConnections(connections)
+	input_bits := make([]int, 10)
+	input := NewBitset(64)
+	input.Set([]int{1, 5, 22})
+	result := NewBitset(64)
+	c.Overlap(input.ToIndexes(input_bits), result)
+	if result.NumSetBits() != 2 {
+		t.Errorf("Overlap score for columns 1, 5 should be 2: %v", result)
 	}
-	//t.Fail()
 }
