@@ -6,7 +6,7 @@ import "container/heap"
 
 type ScoredElement struct {
 	index int
-	score int
+	score float32
 }
 type TopN []ScoredElement
 
@@ -92,7 +92,8 @@ func (l *Layer) ConsumeInput(input *Bitset) {
 		c.Overlap(*input, l.scratch.overlap)
 		overlap_score := l.scratch.overlap.NumSetBits()
 		if overlap_score > 0 {
-			heap.Push(&l.scratch.scores, ScoredElement{i, overlap_score})
+			score := float32(overlap_score) + c.Boost()
+			heap.Push(&l.scratch.scores, ScoredElement{i, score})
 			if l.scratch.scores.Len() > l.maxFiringColumns {
 				heap.Pop(&l.scratch.scores)
 			}
@@ -104,5 +105,11 @@ func (l *Layer) ConsumeInput(input *Bitset) {
 }
 
 func (l *Layer) Learn(input *Bitset) {
-	// TODO(tms): implement
+	if len(l.scratch.scores) > 0 {
+		smallest := l.scratch.scores[0].score
+		for _, el := range l.scratch.scores {
+			col := l.columns[el.index]
+			col.LearnFromInput(input, smallest)
+		}
+	}
 }

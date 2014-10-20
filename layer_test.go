@@ -10,7 +10,7 @@ func TestConsumeInput(t *testing.T) {
 	l.ResetForInput(64, 2)
 
 	input := NewBitset(64)
-	input.SetRange(0, 2)
+	input.SetRange(0, 1)
 
 	l.ConsumeInput(input)
 

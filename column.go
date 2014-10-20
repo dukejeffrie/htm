@@ -22,6 +22,7 @@ type Column struct {
 
 	// Permanence map
 	permanence map[int]float32
+	boost      float32
 	connected  *Bitset
 }
 
@@ -49,6 +50,10 @@ func (c Column) Connected() Bitset {
 	return *c.connected
 }
 
+func (c Column) Boost() float32 {
+	return c.boost
+}
+
 func (c *Column) ResetConnections(num_bits int, connected []int) {
 	c.connected = NewBitset(num_bits)
 	for k, _ := range c.permanence {
@@ -57,10 +62,30 @@ func (c *Column) ResetConnections(num_bits int, connected []int) {
 	for _, v := range connected {
 		c.permanence[v] = INITIAL_PERMANENCE
 	}
+	c.boost = columnRand.Float32() * 0.0001
 	c.connected.Set(connected)
 }
 
 func (c Column) Overlap(input Bitset, result *Bitset) {
 	result.CopyFrom(*c.connected)
 	result.And(input)
+}
+
+func (c *Column) LearnFromInput(input *Bitset, score float32) {
+	increment := float32(0.05)
+	for k, v := range c.permanence {
+		if input.IsSet(k) {
+			c.permanence[k] += increment
+		} else {
+			c.permanence[k] -= increment
+		}
+		v2 := c.permanence[k]
+		if v >= CONNECTION_THRESHOLD {
+			if v2 < CONNECTION_THRESHOLD {
+				c.connected.ClearOne(k)
+			}
+		} else if v2 >= CONNECTION_THRESHOLD {
+			c.connected.SetOne(k)
+		}
+	}
 }

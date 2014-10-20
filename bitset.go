@@ -105,6 +105,11 @@ func (b *Bitset) SetOne(index int) {
 	b.binary[pos] |= 1 << uint64(offset)
 }
 
+func (b *Bitset) ClearOne(index int) {
+	pos, offset := index/64, index%64
+	b.binary[pos] &= ^(1 << uint64(offset))
+}
+
 func (b Bitset) String() string {
 	indices := make([]int, b.NumSetBits())
 	indices = b.ToIndexes(indices)

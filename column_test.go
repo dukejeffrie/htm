@@ -42,3 +42,29 @@ func BenchmarkOverlap(b *testing.B) {
 		c.Overlap(*input, result)
 	}
 }
+
+func TestLearnFromInput(t *testing.T) {
+	c := NewColumn(1)
+	connections := []int{1, 3, 5, 8, 11}
+	c.ResetConnections(64, connections)
+	input := NewBitset(64)
+	input.Set([]int{1, 5, 22})
+	c.LearnFromInput(input, 2.0)
+	t.Log(c.permanence)
+	if c.permanence[1] <= c.permanence[3] {
+		t.Errorf("Permanence scores did not improve: %v", c.permanence)
+	}
+	if c.permanence[1] != c.permanence[5] {
+		t.Errorf("Permanence scores must be uniform: %v", c.permanence)
+	}
+	if c.permanence[22] != 0 {
+		t.Errorf("Permanence for non-connected should be zero: %v", c.permanence)
+	}
+	if c.Connected().NumSetBits() != 2 {
+		t.Errorf("Should have kept only 2 connections: %v", c.permanence)
+	}
+
+	c.LearnFromInput(input, 2.0)
+	t.Log(c.permanence)
+	t.Fail()
+}
