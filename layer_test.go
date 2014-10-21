@@ -4,7 +4,7 @@ import "testing"
 
 func TestConsumeInput(t *testing.T) {
 	// 50 columns with 4 cells each.
-	l := NewLayer("Single Layer", 50, 4)
+	l := NewLayer("Single Layer", 50, 4, 0.02)
 
 	// 64-bit input, 2 bits of real data.
 	l.ResetForInput(64, 2)
@@ -12,7 +12,7 @@ func TestConsumeInput(t *testing.T) {
 	input := NewBitset(64)
 	input.SetRange(0, 1)
 
-	l.ConsumeInput(input)
+	l.ConsumeInput(*input)
 
 	// Let's store all the top cells connections into the input bit, so we get them again the second time around.
 	next_input := NewBitset(64)
@@ -24,12 +24,12 @@ func TestConsumeInput(t *testing.T) {
 	last_scores := make([]ScoredElement, l.scratch.scores.Len())
 	copy(last_scores, l.scratch.scores)
 
-	l.ConsumeInput(NewBitset(64))
+	l.ConsumeInput(*NewBitset(64))
 	if l.scratch.scores.Len() != 0 {
 		t.Errorf("Leftovers in scratch: %v", l.scratch)
 	}
 
-	l.ConsumeInput(next_input)
+	l.ConsumeInput(*next_input)
 	for _, old := range last_scores {
 		found := false
 		for _, el := range l.scratch.scores {
@@ -46,7 +46,7 @@ func TestConsumeInput(t *testing.T) {
 }
 
 func BenchmarkConsumeInput(b *testing.B) {
-	l := NewLayer("Single Layer", 500, 4)
+	l := NewLayer("Single Layer", 500, 4, 0.02)
 	l.ResetForInput(2048, 28)
 
 	input := NewBitset(2048)
@@ -54,6 +54,6 @@ func BenchmarkConsumeInput(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		l.ConsumeInput(input)
+		l.ConsumeInput(*input)
 	}
 }

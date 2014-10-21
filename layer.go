@@ -3,6 +3,7 @@
 package htm
 
 import "fmt"
+import "math"
 import "container/heap"
 import "io"
 
@@ -51,8 +52,8 @@ type Layer struct {
 }
 
 // Creates a new named layer with this many columns.
-func NewLayer(name string, width, height int) *Layer {
-	maxFiringColumns := (width * 2 / 100) + 1
+func NewLayer(name string, width, height int, firing_ratio float64) *Layer {
+	maxFiringColumns := int(math.Ceil(float64(width)*firing_ratio)) + 1
 	result := &Layer{
 		columns: make([]*Column, width),
 		name:    name,
@@ -78,9 +79,8 @@ func (l Layer) Width() int {
 }
 
 func (l *Layer) ResetForInput(n, w int) {
-	permutation := columnRand.Perm(n)
-	for i, col := range l.columns {
-		col.ResetConnections(n, permutation[i:i+w])
+	for _, col := range l.columns {
+		col.ResetConnections(n, columnRand.Perm(n)[:w])
 	}
 	if cap(l.scratch.input) < w {
 		l.scratch.input = make([]int, w)
@@ -89,10 +89,11 @@ func (l *Layer) ResetForInput(n, w int) {
 	l.scratch.scores = l.scratch.scores[0:0]
 }
 
-func (l *Layer) ConsumeInput(input *Bitset) {
+func (l *Layer) ConsumeInput(input Bitset) {
 	l.scratch.scores = l.scratch.scores[0:0]
 	for i, c := range l.columns {
-		c.Overlap(*input, l.scratch.overlap)
+		c.active.Reset()
+		c.Overlap(input, l.scratch.overlap)
 		overlap_score := l.scratch.overlap.NumSetBits()
 		if overlap_score > 0 {
 			score := float32(overlap_score) + c.Boost()
@@ -102,12 +103,15 @@ func (l *Layer) ConsumeInput(input *Bitset) {
 			}
 		}
 	}
+	for _, el := range l.scratch.scores {
+		l.columns[el.index].Activate()
+	}
 	if l.Learning {
 		l.Learn(input)
 	}
 }
 
-func (l *Layer) Learn(input *Bitset) {
+func (l *Layer) Learn(input Bitset) {
 	if len(l.scratch.scores) > 0 {
 		smallest := l.scratch.scores[0].score
 		for _, el := range l.scratch.scores {
@@ -118,9 +122,10 @@ func (l *Layer) Learn(input *Bitset) {
 }
 
 func (l Layer) Print(writer io.Writer) {
-	fmt.Fprintf(writer, "\n=== $s (learning: %t) ===", l.name, l.Learning)
+	fmt.Fprintf(writer, "\n=== %s (learning: %t) ===", l.name, l.Learning)
 	for i, col := range l.columns {
 		fmt.Fprintf(writer, "\n%d. ", i)
 		col.Print(writer)
 	}
+	fmt.Fprintln(writer)
 }

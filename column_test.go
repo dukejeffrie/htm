@@ -51,7 +51,7 @@ func TestLearnFromInput(t *testing.T) {
 	c.ResetConnections(64, connections)
 	input := NewBitset(64)
 	input.Set([]int{1, 5, 22})
-	c.LearnFromInput(input, 2.0)
+	c.LearnFromInput(*input, 2.0)
 	t.Log(c.permanence)
 	if c.permanence[1] <= c.permanence[3] {
 		t.Errorf("Permanence scores did not improve: %v", c.permanence)
@@ -66,7 +66,7 @@ func TestLearnFromInput(t *testing.T) {
 		t.Errorf("Should have kept only 2 connections: %v", c.permanence)
 	}
 
-	c.LearnFromInput(input, 2.0)
+	c.LearnFromInput(*input, 2.0)
 	t.Log(c.permanence)
 }
 

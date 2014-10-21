@@ -25,7 +25,15 @@ func (i Input) String() string {
 type InputSource struct {
 	Name    string
 	Decoder DecoderFunction
-	Source  <-chan *RawInput
+	Source  chan *RawInput
+}
+
+func NewInputSource(name string, dec DecoderFunction) InputSource {
+	return InputSource{
+		Name:    name,
+		Decoder: dec,
+		Source:  make(chan *RawInput),
+	}
 }
 
 func (c *InputSource) Next() (result *Input, err error) {

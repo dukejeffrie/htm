@@ -72,7 +72,7 @@ func (c Column) Overlap(input Bitset, result *Bitset) {
 	result.And(input)
 }
 
-func (c *Column) LearnFromInput(input *Bitset, score float32) {
+func (c *Column) LearnFromInput(input Bitset, score float32) {
 	increment := float32(0.05)
 	for k, v := range c.permanence {
 		if input.IsSet(k) {
@@ -90,6 +90,16 @@ func (c *Column) LearnFromInput(input *Bitset, score float32) {
 		}
 	}
 }
+
+func (c *Column) Activate() {
+	if c.predicted.NumSetBits() > 0 {
+		c.active.CopyFrom(*c.predicted)
+	} else {
+		// Bursting.
+		c.active.SetRange(0, c.Height())
+	}
+}
+
 func (c Column) ToByte(idx int) byte {
 	if c.active.IsSet(idx) {
 		if c.predicted.IsSet(idx) {
