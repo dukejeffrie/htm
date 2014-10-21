@@ -4,21 +4,6 @@ import "fmt"
 import "io"
 import "testing"
 
-func TestReset(t *testing.T) {
-	c := NewColumn(1)
-	connections := []int{1, 3, 5, 8, 11}
-	c.ResetConnections(64, connections)
-	connected := c.Connected().ToIndexes(make([]int, len(connections)))
-	for i, v := range connections {
-		if connected[i] != v {
-			t.Errorf("Connection mismatch: %v != %v", v, connected[i])
-		}
-		if c.permanence[v] != INITIAL_PERMANENCE {
-			t.Errorf("Initial permanence should have been set for connection %v", v)
-		}
-	}
-}
-
 func BenchmarkOverlap(b *testing.B) {
 	c := NewColumn(1)
 	connections := []int{1, 3, 5, 8, 11}
@@ -31,31 +16,6 @@ func BenchmarkOverlap(b *testing.B) {
 		result.CopyFrom(c.Connected())
 		result.And(*input)
 	}
-}
-
-func TestLearnFromInput(t *testing.T) {
-	c := NewColumn(1)
-	connections := []int{1, 3, 5, 8, 11}
-	c.ResetConnections(64, connections)
-	input := NewBitset(64)
-	input.Set([]int{1, 5, 22})
-	c.LearnFromInput(*input)
-	t.Log(c.permanence)
-	if c.permanence[1] <= c.permanence[3] {
-		t.Errorf("Permanence scores did not improve: %v", c.permanence)
-	}
-	if c.permanence[1] != c.permanence[5] {
-		t.Errorf("Permanence scores must be uniform: %v", c.permanence)
-	}
-	if c.permanence[22] != 0 {
-		t.Errorf("Permanence for non-connected should be zero: %v", c.permanence)
-	}
-	if c.Connected().NumSetBits() != 2 {
-		t.Errorf("Should have kept only 2 connections: %v", c.permanence)
-	}
-
-	c.LearnFromInput(*input)
-	t.Log(c.permanence)
 }
 
 func TestPrintColumn(t *testing.T) {
