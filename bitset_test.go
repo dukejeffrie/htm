@@ -3,6 +3,7 @@
 package htm
 
 import "fmt"
+import "io"
 import "testing"
 import "math/rand"
 
@@ -89,6 +90,29 @@ func TestIndexing(t *testing.T) {
 
 	sl := make([]int, 10)
 	ExpectContentEquals(t, "indices 1 and 3", []int{1, 3}, b.ToIndexes(sl))
+}
+
+func TestPrint(t *testing.T) {
+	even := NewBitset(64)
+	even.Set([]int{2, 4, 8, 16, 32})
+	odd := NewBitset(64)
+	odd.Set([]int{1, 3, 7, 15, 31})
+
+	reader, writer := io.Pipe()
+
+	go func() {
+		even.Print(writer)
+		fmt.Fprint(writer, " ")
+		odd.Print(writer)
+		writer.Close()
+	}()
+
+	var s1, s2 string
+	if _, err := fmt.Fscan(reader, &s1, &s2); err != nil {
+		t.Error(err)
+	}
+	ExpectEquals(t, "even string", fmt.Sprintf("%b", even.binary[0]), s1)
+	ExpectEquals(t, "odd string", fmt.Sprintf("%b", odd.binary[0]), s2)
 }
 
 func SetBenchmarkTemplate(b *testing.B, n, l int) {

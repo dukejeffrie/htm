@@ -3,6 +3,7 @@
 package htm
 
 import "fmt"
+import "io"
 import "math/rand"
 
 const (
@@ -15,9 +16,9 @@ var columnRand = rand.New(columnSource)
 
 // Keeps information about a column in a cortical layer.
 type Column struct {
-	// The bitset of columns that are active
+	// The bitset of cells that are active
 	active *Bitset
-	// The bitset of columns that are predicted
+	// The bitset of cells that are predicted
 	predicted *Bitset
 
 	// Permanence map
@@ -88,4 +89,25 @@ func (c *Column) LearnFromInput(input *Bitset, score float32) {
 			c.connected.SetOne(k)
 		}
 	}
+}
+func (c Column) ToByte(idx int) byte {
+	if c.active.IsSet(idx) {
+		if c.predicted.IsSet(idx) {
+			return 'v'
+		} else {
+			return '!'
+		}
+	} else if c.predicted.IsSet(idx) {
+		return 'o'
+	}
+	return '.'
+}
+
+func (c Column) Print(writer io.Writer) error {
+	bytes := make([]byte, c.Height())
+	for i := 0; i < c.Height(); i++ {
+		bytes[i] = c.ToByte(i)
+	}
+	_, err := writer.Write(bytes)
+	return err
 }

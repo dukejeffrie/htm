@@ -1,5 +1,7 @@
 package htm
 
+import "fmt"
+import "io"
 import "testing"
 
 func TestReset(t *testing.T) {
@@ -66,4 +68,29 @@ func TestLearnFromInput(t *testing.T) {
 
 	c.LearnFromInput(input, 2.0)
 	t.Log(c.permanence)
+}
+
+func TestPrintColumn(t *testing.T) {
+	col := NewColumn(5)
+	col.ResetConnections(64, []int{1, 10, 11, 20})
+	col.predicted.Set([]int{3, 4})
+	col.active.Set([]int{1, 3})
+	reader, writer := io.Pipe()
+
+	go func() {
+		werr := col.Print(writer)
+		if werr != nil {
+			t.Error(werr)
+		}
+		writer.Close()
+	}()
+
+	var s1 string
+	if _, rerr := fmt.Fscan(reader, &s1); rerr != nil {
+		t.Error(rerr)
+	}
+	expected := ".!.vo"
+	if s1 != expected {
+		t.Errorf("Print doesn't match: %v != %v", expected, s1)
+	}
 }

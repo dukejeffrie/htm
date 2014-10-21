@@ -5,6 +5,7 @@
 package htm
 
 import "fmt"
+import "io"
 import "strings"
 import "sort"
 
@@ -166,6 +167,12 @@ func (b *Bitset) And(other Bitset) {
 	}
 	for i, v := range other.binary {
 		b.binary[i] &= v
+	}
+}
+
+func (b Bitset) Print(writer io.Writer) {
+	for _, v := range b.binary {
+		fmt.Fprintf(writer, "%b", v)
 	}
 }
 

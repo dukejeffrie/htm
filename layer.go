@@ -2,7 +2,9 @@
 
 package htm
 
+import "fmt"
 import "container/heap"
+import "io"
 
 type ScoredElement struct {
 	index int
@@ -112,5 +114,13 @@ func (l *Layer) Learn(input *Bitset) {
 			col := l.columns[el.index]
 			col.LearnFromInput(input, smallest)
 		}
+	}
+}
+
+func (l Layer) Print(writer io.Writer) {
+	fmt.Fprintf(writer, "\n=== $s (learning: %t) ===", l.name, l.Learning)
+	for i, col := range l.columns {
+		fmt.Fprintf(writer, "\n%d. ", i)
+		col.Print(writer)
 	}
 }
