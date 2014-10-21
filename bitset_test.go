@@ -92,7 +92,7 @@ func TestIndexing(t *testing.T) {
 	ExpectContentEquals(t, "indices 1 and 3", []int{1, 3}, b.ToIndexes(sl))
 }
 
-func TestPrint(t *testing.T) {
+func TestPrintBitset(t *testing.T) {
 	even := NewBitset(64)
 	even.Set([]int{2, 4, 8, 16, 32})
 	odd := NewBitset(64)
@@ -101,18 +101,35 @@ func TestPrint(t *testing.T) {
 	reader, writer := io.Pipe()
 
 	go func() {
-		even.Print(writer)
-		fmt.Fprint(writer, " ")
-		odd.Print(writer)
+		if err := even.Print(16, writer); err != nil {
+			t.Error(err)
+		}
+		fmt.Fprint(writer, "\n")
+		if err := odd.Print(40, writer); err != nil {
+			t.Error(err)
+		}
 		writer.Close()
 	}()
 
-	var s1, s2 string
-	if _, err := fmt.Fscan(reader, &s1, &s2); err != nil {
+	var e1, e2, e3, e4 string
+	if _, err := fmt.Fscan(reader, &e1, &e2, &e3, &e4); err != nil {
 		t.Error(err)
 	}
-	ExpectEquals(t, "even string", fmt.Sprintf("%b", even.binary[0]), s1)
-	ExpectEquals(t, "odd string", fmt.Sprintf("%b", odd.binary[0]), s2)
+	t.Log(e1)
+	t.Log(e2)
+	t.Log(e3)
+	t.Log(e4)
+	estr := e1 + e2 + e3 + e4
+	ExpectEquals(t, "even string",
+		"--x-x---x-------x---------------x-------------------------------", estr)
+
+	var o1, o2 string
+	if _, err := fmt.Fscan(reader, &o1, &o2); err != nil {
+		t.Error(err)
+	}
+	ostr := o1 + o2
+	ExpectEquals(t, "odd string",
+		"-x-x---x-------x---------------x--------------------------------", ostr)
 }
 
 func SetBenchmarkTemplate(b *testing.B, n, l int) {

@@ -5,6 +5,7 @@
 package htm
 
 import "fmt"
+import "bufio"
 import "io"
 import "strings"
 import "sort"
@@ -170,10 +171,33 @@ func (b *Bitset) And(other Bitset) {
 	}
 }
 
-func (b Bitset) Print(writer io.Writer) {
+func (b Bitset) Print(width int, writer io.Writer) (err error) {
+	n := 0
+	buf := bufio.NewWriter(writer)
 	for _, v := range b.binary {
-		fmt.Fprintf(writer, "%b", v)
+		for i := 0; i < 64; i++ {
+			if n >= b.length {
+				break
+			}
+			if v&(1<<uint64(i)) != 0 {
+				if _, err = buf.WriteRune('x'); err != nil {
+					return
+				}
+			} else {
+				if _, err = buf.WriteRune('-'); err != nil {
+					return
+				}
+			}
+			n++
+			if n%width == 0 {
+				if _, err = buf.WriteRune('\n'); err != nil {
+					return
+				}
+			}
+		}
 	}
+	buf.Flush()
+	return
 }
 
 // Creates a new bitset with enough storage for at least the given number of bits.
