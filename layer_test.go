@@ -47,6 +47,7 @@ func TestConsumeInput(t *testing.T) {
 
 func BenchmarkConsumeInput(b *testing.B) {
 	l := NewLayer("Single Layer", 500, 4, 0.02)
+	l.Learning = false
 	l.ResetForInput(2048, 28)
 
 	input := NewBitset(2048)

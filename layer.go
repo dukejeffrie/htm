@@ -79,8 +79,12 @@ func (l Layer) Width() int {
 }
 
 func (l *Layer) ResetForInput(n, w int) {
+	perm := make([]int, w)
 	for _, col := range l.columns {
-		col.ResetConnections(n, columnRand.Perm(n)[:w])
+		for i := 0; i < w; i++ {
+			perm[i] = columnRand.Intn(n)
+		}
+		col.ResetConnections(n, perm)
 	}
 	if cap(l.scratch.input) < w {
 		l.scratch.input = make([]int, w)
