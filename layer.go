@@ -93,7 +93,8 @@ func (l *Layer) ConsumeInput(input Bitset) {
 	l.scratch.scores = l.scratch.scores[0:0]
 	for i, c := range l.columns {
 		c.active.Reset()
-		c.Overlap(input, l.scratch.overlap)
+		l.scratch.overlap.CopyFrom(c.Connected())
+		l.scratch.overlap.And(input)
 		overlap_score := l.scratch.overlap.NumSetBits()
 		if overlap_score > 0 {
 			score := float32(overlap_score) + c.Boost()
@@ -113,10 +114,9 @@ func (l *Layer) ConsumeInput(input Bitset) {
 
 func (l *Layer) Learn(input Bitset) {
 	if len(l.scratch.scores) > 0 {
-		smallest := l.scratch.scores[0].score
 		for _, el := range l.scratch.scores {
 			col := l.columns[el.index]
-			col.LearnFromInput(input, smallest)
+			col.LearnFromInput(input)
 		}
 	}
 }

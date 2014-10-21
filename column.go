@@ -16,15 +16,15 @@ var columnRand = rand.New(columnSource)
 
 // Keeps information about a column in a cortical layer.
 type Column struct {
-	// The bitset of cells that are active
+	// The bitset of cells that are active.
 	active *Bitset
-	// The bitset of cells that are predicted
+	// The bitset of cells that are predicted.
 	predicted *Bitset
 
 	// Permanence map
 	permanence map[int]float32
-	boost      float32
 	connected  *Bitset
+	boost      float32
 }
 
 func NewColumn(height int) *Column {
@@ -67,12 +67,7 @@ func (c *Column) ResetConnections(num_bits int, connected []int) {
 	c.connected.Set(connected)
 }
 
-func (c Column) Overlap(input Bitset, result *Bitset) {
-	result.CopyFrom(*c.connected)
-	result.And(input)
-}
-
-func (c *Column) LearnFromInput(input Bitset, score float32) {
+func (c *Column) LearnFromInput(input Bitset) {
 	increment := float32(0.05)
 	for k, v := range c.permanence {
 		if input.IsSet(k) {
