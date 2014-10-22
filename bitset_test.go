@@ -92,6 +92,49 @@ func TestIndexing(t *testing.T) {
 	ExpectContentEquals(t, "indices 1 and 3", []int{1, 3}, b.ToIndexes(sl))
 }
 
+func TestAppend(t *testing.T) {
+	scratch := make([]int, 20)
+
+	src := NewBitset(5)
+	src.SetOne(1)
+	src.SetOne(4)
+
+	dest := NewBitset(5)
+	dest.Append(*src)
+
+	ExpectEquals(t, "length", 10, dest.Len())
+	ExpectContentEquals(t, fmt.Sprintf("dest: %v", dest), []int{6, 9}, dest.ToIndexes(scratch))
+
+	dest.Append(*src)
+
+	ExpectEquals(t, "length", 15, dest.Len())
+	ExpectContentEquals(t, fmt.Sprintf("dest: %v", dest), []int{6, 9, 11, 14}, dest.ToIndexes(scratch))
+}
+
+func TestAppendLong(t *testing.T) {
+	scratch := make([]int, 20)
+	dest := NewBitset(20)
+	dest.SetOne(10)
+	src := NewBitset(60)
+	src.SetOne(2)
+	src.SetOne(22)
+	src.SetOne(59)
+
+	dest.Append(*src)
+	ExpectEquals(t, "length", 80, dest.Len())
+	ExpectContentEquals(t, fmt.Sprintf("dest: %v", dest), []int{10, 22, 42, 79}, dest.ToIndexes(scratch))
+}
+
+func BenchmarkAppend(b *testing.B) {
+	src := NewBitset(17)
+	src.Set([]int{2, 8, 14, 16})
+	dest := NewBitset(2)
+	dest.SetOne(1)
+	for i := 0; i < b.N; i++ {
+		dest.Append(*src)
+	}
+}
+
 func TestPrintBitset(t *testing.T) {
 	even := NewBitset(64)
 	even.Set([]int{2, 4, 8, 16, 32})

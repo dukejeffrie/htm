@@ -165,6 +165,37 @@ func (b *Bitset) And(other Bitset) {
 	}
 }
 
+func (b *Bitset) Append(other Bitset) {
+	if b.length%64 == 0 {
+		// Easy case, aligned words.
+		b.binary = append(b.binary, other.binary...)
+		b.length += other.length
+		return
+	}
+
+	// Hard case, need to shift other left by b.length % 64 bits and pack
+	// it one word earlier.
+
+	rem := uint64(b.length % 64)
+
+	l := b.length + other.length
+	num := l / 64
+	if l%64 > 0 {
+		num++
+	}
+	num -= len(b.binary)
+
+	for src := 0; src < len(other.binary); src++ {
+		el := other.binary[src]
+		b.binary[len(b.binary)-1] |= el << rem
+		if num > 0 {
+			b.binary = append(b.binary, el>>(64-rem))
+			num--
+		}
+	}
+	b.length += other.length
+}
+
 func (b Bitset) Print(width int, writer io.Writer) (err error) {
 	n := 0
 	buf := bufio.NewWriter(writer)
