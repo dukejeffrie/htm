@@ -173,6 +173,25 @@ func BenchmarkAppendOdd2048T(b *testing.B) {
 	AppendBenchmarkTemplate(b, 2047, 2048, true)
 }
 
+func SetFromBitsetAtBenchmarkTemplate(b *testing.B, src_size int) {
+	src := NewBitset(src_size)
+	src.Set([]int{1, 3, 5})
+	b.ResetTimer()
+	dest := NewBitset(20480)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		dest.SetFromBitsetAt(*src, 16666)
+	}
+}
+
+func BenchmarkSetFromBitsetAt64(b *testing.B) {
+	SetFromBitsetAtBenchmarkTemplate(b, 64)
+}
+
+func BenchmarkSetFromBitsetAt2048(b *testing.B) {
+	SetFromBitsetAtBenchmarkTemplate(b, 2048)
+}
+
 func TestPrintBitset(t *testing.T) {
 	even := NewBitset(64)
 	even.Set([]int{2, 4, 8, 16, 32})

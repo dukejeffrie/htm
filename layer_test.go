@@ -89,19 +89,3 @@ func BenchmarkConsumeInput(b *testing.B) {
 		l.ConsumeInput(*input)
 	}
 }
-
-func BenchmarkProduceOutput(b *testing.B) {
-	l := NewLayer("Single Layer", 500, 4, 0.02)
-	l.Learning = false
-	l.ResetForInput(2048, 28)
-
-	input := NewBitset(2048)
-	input.Set(columnRand.Perm(2048)[0:28])
-	l.ConsumeInput(*input)
-
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		l.Output()
-		l.outputIsDirty = true
-	}
-}
