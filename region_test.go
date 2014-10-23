@@ -2,11 +2,36 @@ package htm
 
 import "testing"
 
+func TestMinOverlap(t *testing.T) {
+	l := NewRegion("Single Region", 100, 4, 0.02)
+	columnRand.Seed(0)
+	l.ResetForInput(2048, 20)
+
+	input := NewBitset(2048)
+	input.SetRange(0, 20)
+
+	l.ConsumeInput(*input)
+	output := l.Output()
+
+	if output.NumSetBits() == 0 {
+		t.Errorf("Output is empty: %v", output)
+	}
+	t.Log(output)
+
+	l.MinOverlap = 4
+	l.ConsumeInput(*input)
+	output = l.Output()
+	if output.NumSetBits() != 0 {
+		t.Errorf("Output should be empty: %v", output)
+	}
+}
+
 func TestConsumeInput(t *testing.T) {
 	// 50 columns with 4 cells each, firing 2% of columns
 	l := NewRegion("Single Region", 50, 4, 0.02)
 
 	// 64-bit input, 2 bits of real data.
+	columnRand.Seed(1)
 	l.ResetForInput(64, 2)
 
 	input := NewBitset(64)

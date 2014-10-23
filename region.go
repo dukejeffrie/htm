@@ -50,6 +50,7 @@ type Region struct {
 	output           *Bitset
 	scratch          Scratch
 	maxFiringColumns int
+	MinOverlap       int
 }
 
 // Creates a new named region with this many columns.
@@ -64,6 +65,7 @@ func NewRegion(name string, width, height int, firing_ratio float64) *Region {
 			scores: make([]ScoredElement, 0, maxFiringColumns),
 		},
 		maxFiringColumns: maxFiringColumns,
+		MinOverlap:       1,
 		Learning:         true,
 	}
 	for i := 0; i < width; i++ {
@@ -102,7 +104,7 @@ func (l *Region) ConsumeInput(input Bitset) {
 		l.scratch.overlap.CopyFrom(c.Connected())
 		l.scratch.overlap.And(input)
 		overlap_score := l.scratch.overlap.NumSetBits()
-		if overlap_score > 0 {
+		if overlap_score >= l.MinOverlap {
 			score := float32(overlap_score) + c.Boost()
 			heap.Push(&l.scratch.scores, ScoredElement{i, score})
 			if l.scratch.scores.Len() > l.maxFiringColumns {
