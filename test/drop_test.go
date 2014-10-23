@@ -14,7 +14,7 @@ type Drop struct {
 	Input    htm.InputSource
 	Output   io.Writer
 	rawInput []*htm.RawInput
-	layer0   *htm.Layer
+	region0  *htm.Region
 	step     int
 	t        *testing.T
 }
@@ -40,8 +40,8 @@ func (d *Drop) Generate() {
 }
 
 func (d *Drop) InitializeNetwork() {
-	d.layer0 = htm.NewLayer("0-drop", 100, 9, 0.05)
-	d.layer0.ResetForInput(64, 2)
+	d.region0 = htm.NewRegion("0-drop", 100, 9, 0.05)
+	d.region0.ResetForInput(64, 2)
 }
 
 func (d *Drop) Step() {
@@ -55,8 +55,8 @@ func (d *Drop) Step() {
 
 	fmt.Fprintf(d.Output, "\n\v>>> Step %d: %v\n", d.step, input)
 	input.Value.Print(16, d.Output)
-	d.layer0.ConsumeInput(input.Value)
-	d.layer0.Print(d.Output)
+	d.region0.ConsumeInput(input.Value)
+	d.region0.Print(d.Output)
 }
 
 func TestDrop(t *testing.T) {

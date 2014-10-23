@@ -1,4 +1,4 @@
-// A layer is a group of cells of the same hierarchy within a region. It is called "local neighborhood" in Numenta code.
+// A region is a group of cells of the same hierarchy within a region. It is called "local neighborhood" in Numenta code.
 
 package htm
 
@@ -43,7 +43,7 @@ type Scratch struct {
 	scores  TopN
 }
 
-type Layer struct {
+type Region struct {
 	Name             string
 	Learning         bool
 	columns          []*Column
@@ -52,10 +52,10 @@ type Layer struct {
 	maxFiringColumns int
 }
 
-// Creates a new named layer with this many columns.
-func NewLayer(name string, width, height int, firing_ratio float64) *Layer {
+// Creates a new named region with this many columns.
+func NewRegion(name string, width, height int, firing_ratio float64) *Region {
 	maxFiringColumns := int(math.Ceil(float64(width)*firing_ratio)) + 1
-	result := &Layer{
+	result := &Region{
 		columns: make([]*Column, width),
 		output:  NewBitset(width * height),
 		Name:    name,
@@ -72,15 +72,15 @@ func NewLayer(name string, width, height int, firing_ratio float64) *Layer {
 	return result
 }
 
-func (l Layer) Height() int {
+func (l Region) Height() int {
 	return l.columns[0].Height()
 }
 
-func (l Layer) Width() int {
+func (l Region) Width() int {
 	return len(l.columns)
 }
 
-func (l *Layer) ResetForInput(n, w int) {
+func (l *Region) ResetForInput(n, w int) {
 	perm := make([]int, w)
 	for _, col := range l.columns {
 		for i := 0; i < w; i++ {
@@ -95,7 +95,7 @@ func (l *Layer) ResetForInput(n, w int) {
 	l.scratch.scores = l.scratch.scores[0:0]
 }
 
-func (l *Layer) ConsumeInput(input Bitset) {
+func (l *Region) ConsumeInput(input Bitset) {
 	l.scratch.scores = l.scratch.scores[0:0]
 	for i, c := range l.columns {
 		c.active.Reset()
@@ -121,11 +121,11 @@ func (l *Layer) ConsumeInput(input Bitset) {
 	}
 }
 
-func (l *Layer) Output() Bitset {
+func (l *Region) Output() Bitset {
 	return *l.output
 }
 
-func (l *Layer) Learn(input Bitset) {
+func (l *Region) Learn(input Bitset) {
 	if len(l.scratch.scores) > 0 {
 		for _, el := range l.scratch.scores {
 			col := l.columns[el.index]
@@ -134,7 +134,7 @@ func (l *Layer) Learn(input Bitset) {
 	}
 }
 
-func (l Layer) Print(writer io.Writer) {
+func (l Region) Print(writer io.Writer) {
 	fmt.Fprintf(writer, "\n=== %s (learning: %t) ===", l.Name, l.Learning)
 	for i, col := range l.columns {
 		fmt.Fprintf(writer, "\n%d. ", i)

@@ -9,7 +9,7 @@ import "math/rand"
 var columnSource = rand.NewSource(1979)
 var columnRand = rand.New(columnSource)
 
-// Keeps information about a column in a cortical layer.
+// Keeps information about a column in a cortical region.
 type Column struct {
 	// The bitset of cells that are active.
 	active *Bitset

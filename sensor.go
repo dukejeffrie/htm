@@ -1,4 +1,4 @@
-// Sensorial layer. Converts a real world data into a binary representation.
+// Sensorial region. Converts a real world data into a binary representation.
 
 package htm
 

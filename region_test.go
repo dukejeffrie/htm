@@ -4,7 +4,7 @@ import "testing"
 
 func TestConsumeInput(t *testing.T) {
 	// 50 columns with 4 cells each, firing 2% of columns
-	l := NewLayer("Single Layer", 50, 4, 0.02)
+	l := NewRegion("Single Region", 50, 4, 0.02)
 
 	// 64-bit input, 2 bits of real data.
 	l.ResetForInput(64, 2)
@@ -77,7 +77,7 @@ func TestConsumeInput(t *testing.T) {
 }
 
 func BenchmarkConsumeInput(b *testing.B) {
-	l := NewLayer("Single Layer", 500, 4, 0.02)
+	l := NewRegion("Single Region", 500, 4, 0.02)
 	l.Learning = false
 	l.ResetForInput(2048, 28)
 
