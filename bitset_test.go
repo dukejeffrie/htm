@@ -125,14 +125,52 @@ func TestAppendLong(t *testing.T) {
 	ExpectContentEquals(t, fmt.Sprintf("dest: %v", dest), []int{10, 22, 42, 79}, dest.ToIndexes(scratch))
 }
 
-func BenchmarkAppend(b *testing.B) {
-	src := NewBitset(17)
-	src.Set([]int{2, 8, 14, 16})
-	dest := NewBitset(2)
-	dest.SetOne(1)
+func AppendBenchmarkTemplate(b *testing.B, src_size, dest_size int,
+	truncate bool) {
+	src := NewBitset(src_size)
+	src.Set([]int{2, src_size / 2, (src_size - 1) / 2 * 2})
+	b.ResetTimer()
+	dest := NewBitset(dest_size)
 	for i := 0; i < b.N; i++ {
 		dest.Append(*src)
+		if truncate {
+			dest.Truncate(dest_size)
+		} else {
+			dest = NewBitset(dest_size)
+		}
 	}
+}
+
+func BenchmarkAppendEven64(b *testing.B) {
+	AppendBenchmarkTemplate(b, 64, 64, false)
+}
+
+func BenchmarkAppendEven64T(b *testing.B) {
+	AppendBenchmarkTemplate(b, 64, 64, true)
+}
+
+func BenchmarkAppendEven2048(b *testing.B) {
+	AppendBenchmarkTemplate(b, 2048, 2048, false)
+}
+
+func BenchmarkAppendEven2048T(b *testing.B) {
+	AppendBenchmarkTemplate(b, 2048, 2048, true)
+}
+
+func BenchmarkAppendOdd64(b *testing.B) {
+	AppendBenchmarkTemplate(b, 59, 64, false)
+}
+
+func BenchmarkAppendOdd64T(b *testing.B) {
+	AppendBenchmarkTemplate(b, 59, 64, true)
+}
+
+func BenchmarkAppendOdd2048(b *testing.B) {
+	AppendBenchmarkTemplate(b, 2047, 2048, false)
+}
+
+func BenchmarkAppendOdd2048T(b *testing.B) {
+	AppendBenchmarkTemplate(b, 2047, 2048, true)
 }
 
 func TestPrintBitset(t *testing.T) {

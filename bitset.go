@@ -179,10 +179,7 @@ func (b *Bitset) Append(other Bitset) {
 	rem := uint64(b.length % 64)
 
 	l := b.length + other.length
-	num := l / 64
-	if l%64 > 0 {
-		num++
-	}
+	num := (l-1)/64 + 1
 	num -= len(b.binary)
 
 	for src := 0; src < len(other.binary); src++ {
@@ -194,6 +191,13 @@ func (b *Bitset) Append(other Bitset) {
 		}
 	}
 	b.length += other.length
+}
+
+func (b *Bitset) Truncate(width int) {
+	if width < b.length {
+		b.length = width
+	}
+	b.binary = b.binary[0 : (b.length-1)/64]
 }
 
 func (b Bitset) Print(width int, writer io.Writer) (err error) {
@@ -228,10 +232,7 @@ func (b Bitset) Print(width int, writer io.Writer) (err error) {
 // Creates a new bitset with enough storage for at least the given number of bits.
 func NewBitset(length int) *Bitset {
 	result := new(Bitset)
-	num := length / 64
-	if (length % 64) > 0 {
-		num++
-	}
+	num := (length-1)/64 + 1
 	result.binary = make([]uint64, num)
 	result.length = length
 	return result
