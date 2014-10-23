@@ -50,6 +50,7 @@ type Layer struct {
 	output           *Bitset
 	scratch          Scratch
 	maxFiringColumns int
+	outputIsDirty    bool
 }
 
 // Creates a new named layer with this many columns.
@@ -96,8 +97,8 @@ func (l *Layer) ResetForInput(n, w int) {
 }
 
 func (l *Layer) ConsumeInput(input Bitset) {
-	l.output.Truncate(0)
 	l.scratch.scores = l.scratch.scores[0:0]
+	l.outputIsDirty = true
 	for i, c := range l.columns {
 		c.active.Reset()
 		l.scratch.overlap.CopyFrom(c.Connected())
@@ -121,10 +122,13 @@ func (l *Layer) ConsumeInput(input Bitset) {
 }
 
 func (l *Layer) Output() Bitset {
-	if l.output.Len() == 0 {
-		for _, c := range l.columns {
-			l.output.Append(c.Active())
+	if l.outputIsDirty {
+		l.output.Reset()
+		for _, el := range l.scratch.scores {
+			col := l.columns[el.index]
+			l.output.SetFromBitsetAt(col.Active(), el.index*col.Height())
 		}
+		l.outputIsDirty = false
 	}
 	return *l.output
 }

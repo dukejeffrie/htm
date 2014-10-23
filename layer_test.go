@@ -18,6 +18,9 @@ func TestConsumeInput(t *testing.T) {
 	if output.Len() != 50*4 {
 		t.Errorf("Weird output length (expected %d, got: %d).", 50*4, output.Len())
 	}
+	if output.NumSetBits() == 0 {
+		t.Errorf("Output is empty: %v", output)
+	}
 	t.Log(output)
 
 	// Let's store all the top cells connections into the input bit, so we get them again the second time around.
@@ -58,6 +61,9 @@ func TestConsumeInput(t *testing.T) {
 	}
 
 	output3 := l.Output()
+	if output3.NumSetBits() == 0 {
+		t.Errorf("Output is empty: %v", output3)
+	}
 	if output.NumSetBits() != output3.NumSetBits() {
 		t.Errorf("Output density very different after learning (expected: %d, but got %d).", output.NumSetBits(), output3.NumSetBits())
 	}
@@ -96,6 +102,6 @@ func BenchmarkProduceOutput(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		l.Output()
-		l.output.Truncate(0)
+		l.outputIsDirty = true
 	}
 }

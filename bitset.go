@@ -165,6 +165,35 @@ func (b *Bitset) And(other Bitset) {
 	}
 }
 
+func (b *Bitset) SetFromBitsetAt(other Bitset, offset int) {
+	if offset+other.Len() > b.Len() {
+		panic(fmt.Errorf("AND operation would go past end! Needs %d bytes, has %d.",
+			offset+other.Len(), b.Len()))
+	}
+	b.appendAt(other, offset)
+}
+
+func (b *Bitset) appendAt(other Bitset, offset int) {
+	rem := uint64(offset % 64)
+	l := offset + other.length
+	num := (l-1)/64 + 1
+	num -= len(b.binary)
+	dest := offset / 64
+
+	for src := 0; src < len(other.binary); src++ {
+		el := other.binary[src]
+		b.binary[dest] |= el << rem
+		if num > 0 {
+			b.binary = append(b.binary, el>>(64-rem))
+			num--
+		}
+		dest++
+	}
+	if l > b.length {
+		b.length = l
+	}
+}
+
 func (b *Bitset) Append(other Bitset) {
 	if b.length%64 == 0 {
 		// Easy case, aligned words.
@@ -175,29 +204,14 @@ func (b *Bitset) Append(other Bitset) {
 
 	// Hard case, need to shift other left by b.length % 64 bits and pack
 	// it one word earlier.
-
-	rem := uint64(b.length % 64)
-
-	l := b.length + other.length
-	num := (l-1)/64 + 1
-	num -= len(b.binary)
-
-	for src := 0; src < len(other.binary); src++ {
-		el := other.binary[src]
-		b.binary[len(b.binary)-1] |= el << rem
-		if num > 0 {
-			b.binary = append(b.binary, el>>(64-rem))
-			num--
-		}
-	}
-	b.length += other.length
+	b.appendAt(other, b.length)
 }
 
 func (b *Bitset) Truncate(width int) {
 	if width < b.length {
 		b.length = width
+		b.binary = b.binary[0 : (b.length-1)/64]
 	}
-	b.binary = b.binary[0 : (b.length-1)/64]
 }
 
 func (b Bitset) Print(width int, writer io.Writer) (err error) {
