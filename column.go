@@ -44,6 +44,10 @@ func (c Column) Connected() Bitset {
 	return c.proximal.Connected()
 }
 
+func (c Column) Active() Bitset {
+	return *c.active
+}
+
 func (c Column) Boost() float32 {
 	return c.boost
 }

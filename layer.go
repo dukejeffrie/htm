@@ -44,11 +44,12 @@ type Scratch struct {
 }
 
 type Layer struct {
+	Name             string
+	Learning         bool
 	columns          []*Column
-	name             string
+	output           *Bitset
 	scratch          Scratch
 	maxFiringColumns int
-	Learning         bool
 }
 
 // Creates a new named layer with this many columns.
@@ -56,7 +57,8 @@ func NewLayer(name string, width, height int, firing_ratio float64) *Layer {
 	maxFiringColumns := int(math.Ceil(float64(width)*firing_ratio)) + 1
 	result := &Layer{
 		columns: make([]*Column, width),
-		name:    name,
+		output:  NewBitset(width * height),
+		Name:    name,
 		scratch: Scratch{
 			input:  make([]int, 28),
 			scores: make([]ScoredElement, 0, maxFiringColumns),
@@ -94,6 +96,7 @@ func (l *Layer) ResetForInput(n, w int) {
 }
 
 func (l *Layer) ConsumeInput(input Bitset) {
+	l.output.Truncate(0)
 	l.scratch.scores = l.scratch.scores[0:0]
 	for i, c := range l.columns {
 		c.active.Reset()
@@ -109,11 +112,21 @@ func (l *Layer) ConsumeInput(input Bitset) {
 		}
 	}
 	for _, el := range l.scratch.scores {
-		l.columns[el.index].Activate()
+		col := l.columns[el.index]
+		col.Activate()
 	}
 	if l.Learning {
 		l.Learn(input)
 	}
+}
+
+func (l *Layer) Output() Bitset {
+	if l.output.Len() == 0 {
+		for _, c := range l.columns {
+			l.output.Append(c.Active())
+		}
+	}
+	return *l.output
 }
 
 func (l *Layer) Learn(input Bitset) {
@@ -126,7 +139,7 @@ func (l *Layer) Learn(input Bitset) {
 }
 
 func (l Layer) Print(writer io.Writer) {
-	fmt.Fprintf(writer, "\n=== %s (learning: %t) ===", l.name, l.Learning)
+	fmt.Fprintf(writer, "\n=== %s (learning: %t) ===", l.Name, l.Learning)
 	for i, col := range l.columns {
 		fmt.Fprintf(writer, "\n%d. ", i)
 		col.Print(writer)

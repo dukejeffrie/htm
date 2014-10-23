@@ -237,3 +237,11 @@ func NewBitset(length int) *Bitset {
 	result.length = length
 	return result
 }
+
+func (b Bitset) Clone() *Bitset {
+	result := new(Bitset)
+	result.binary = make([]uint64, len(b.binary))
+	copy(result.binary, b.binary)
+	result.length = b.length
+	return result
+}
