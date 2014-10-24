@@ -5,6 +5,7 @@ package htm
 const (
 	CONNECTION_THRESHOLD = 0.6
 	INITIAL_PERMANENCE   = 0.6
+	PERMANENCE_MIN       = 0.3
 	PERMANENCE_INC       = float32(0.05)
 	PERMANENCE_DEC       = float32(0.05)
 )
@@ -30,20 +31,41 @@ func NewDendriteSegment(num_bits int, connected []int) *DendriteSegment {
 	return ds
 }
 
-func (ds *DendriteSegment) Learn(input Bitset) {
+func (ds *DendriteSegment) Learn(input Bitset, active bool) {
+	if active {
+		ds.Narrow(input)
+	} else {
+		ds.Broaden(input)
+	}
+}
+
+func (ds *DendriteSegment) Narrow(input Bitset) {
 	for k, v := range ds.permanence {
 		if input.IsSet(k) {
-			ds.permanence[k] += PERMANENCE_INC
-		} else {
-			ds.permanence[k] -= PERMANENCE_DEC
-		}
-		v2 := ds.permanence[k]
-		if v >= CONNECTION_THRESHOLD {
-			if v2 < CONNECTION_THRESHOLD {
-				ds.synapses.Unset(k)
+			v += PERMANENCE_INC
+			if v > 1.0 {
+				v = 1.0
 			}
-		} else if v2 >= CONNECTION_THRESHOLD {
+		} else {
+			v -= PERMANENCE_DEC
+		}
+		ds.permanence[k] = v
+		if v >= CONNECTION_THRESHOLD {
 			ds.synapses.Set(k)
+		} else {
+			ds.synapses.Unset(k)
+			if v < PERMANENCE_MIN {
+				delete(ds.permanence, k)
+			}
+		}
+	}
+}
+
+func (ds *DendriteSegment) Broaden(input Bitset) {
+	for _, k := range input.ToIndexes(make([]int, input.NumSetBits())) {
+		v, ok := ds.permanence[k]
+		if !ok || v < PERMANENCE_MIN {
+			ds.permanence[k] = PERMANENCE_MIN
 		}
 	}
 }

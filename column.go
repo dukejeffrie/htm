@@ -58,7 +58,7 @@ func (c *Column) ResetConnections(num_bits int, connected []int) {
 }
 
 func (c *Column) LearnFromInput(input Bitset) {
-	c.proximal.Learn(input)
+	c.proximal.Learn(input, c.Active().NumSetBits() > 0)
 }
 
 func (c *Column) Activate() {
