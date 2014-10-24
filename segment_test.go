@@ -49,7 +49,7 @@ func TestBroaden(t *testing.T) {
 	}
 	input.Reset()
 	input.Set(1, 8, 22)
-	ds.Broaden(*input)
+	ds.Broaden(*input, 0)
 	if ds.permanence[1] == ds.permanence[3] {
 		t.Errorf("Permanence scores did not improve: %v", ds.permanence)
 	}
@@ -75,4 +75,39 @@ func TestTrim(t *testing.T) {
 		t.Errorf("Should have updated synapses: %v", ds)
 	}
 	t.Log(ds.permanence, ds.Connected())
+}
+
+func TestCycleHistory(t *testing.T) {
+	ch := NewCycleHistory(10)
+	if avg, ok := ch.Average(); ok {
+		t.Errorf("Should not be ok: %f", avg)
+	}
+	ch.Record(true)
+	if avg, ok := ch.Average(); !ok || avg != 1.0 {
+		t.Errorf("Should be %f average: %f, ok=%t", 1.0, avg, ok)
+	}
+	ch.Record(false)
+	if avg, ok := ch.Average(); !ok || avg != 0.5 {
+		t.Errorf("Should be %f average: %f, ok=%t, %v", 0.5, avg, ok, ch)
+	}
+	for i := 2; i < 10; i++ {
+		ch.Record(false)
+	}
+	if avg, ok := ch.Average(); !ok || avg != 0.1 {
+		t.Errorf("Should be %f average: %f, ok=%t, %v", 0.1, avg, ok, ch)
+	}
+	ch.Record(false)
+	if avg, ok := ch.Average(); !ok || avg != 0.0 {
+		t.Errorf("Should be %f average: %f, ok=%t, %v", 0.0, avg, ok, ch)
+	}
+	ch.Record(false)
+	ch.Record(false)
+	ch.Record(false)
+	ch.Record(true)
+	for i := 1; i < 10; i++ {
+		ch.Record(false)
+	}
+	if avg, ok := ch.Average(); !ok || avg != 0.1 {
+		t.Errorf("Should be %f average: %f, ok=%t, %v", 0.1, avg, ok, ch)
+	}
 }

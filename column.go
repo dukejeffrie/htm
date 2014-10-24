@@ -19,7 +19,6 @@ type Column struct {
 
 	// Proximal dendrite segment.
 	proximal *DendriteSegment
-	boost    float32
 }
 
 func NewColumn(height int) *Column {
@@ -50,16 +49,16 @@ func (c Column) Active() Bitset {
 }
 
 func (c Column) Boost() float32 {
-	return c.boost
+	return c.proximal.Boost
 }
 
 func (c *Column) ResetConnections(num_bits int, connected []int) {
 	c.proximal = NewDendriteSegment(num_bits, connected)
-	c.boost = columnRand.Float32() * 0.0001
+	c.proximal.Boost = columnRand.Float32() * 0.00001
 }
 
-func (c *Column) LearnFromInput(input Bitset) {
-	c.proximal.Learn(input, c.Active().NumSetBits() > 0)
+func (c *Column) LearnFromInput(input Bitset, minOverlap int) {
+	c.proximal.Learn(input, c.Active().NumSetBits() > 0, minOverlap)
 }
 
 func (c *Column) Activate() {

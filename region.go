@@ -129,7 +129,7 @@ func (l *Region) Output() Bitset {
 
 func (l *Region) Learn(input Bitset) {
 	for _, col := range l.columns {
-		col.LearnFromInput(input)
+		col.LearnFromInput(input, l.MinOverlap)
 	}
 }
 
