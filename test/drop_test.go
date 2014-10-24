@@ -41,14 +41,25 @@ func (d *Drop) Generate() {
 }
 
 func (d *Drop) InitializeNetwork() {
-	d.region0 = htm.NewRegion("0-drop", 100, 8, 0.05)
-	d.region0.ResetForInput(64, 2)
-	d.region3 = htm.NewRegion("final", 64, 1, 0.05)
-	d.region3.ResetForInput(d.region0.Output().Len(), 5)
+	d.step = 0
+	d.region0 = htm.NewRegion("0-drop", 2000, 9, 0.02)
+	d.region0.ResetForInput(64, 20)
+	d.region1 = htm.NewRegion("1-drop", 200, 8, 0.02)
+	d.region1.ResetForInput(d.region0.Output().Len(), 4)
+	d.region3 = htm.NewRegion("final", 64, 1, 0.1)
+	d.region3.ResetForInput(d.region1.Output().Len(), 5)
 	d.patterns = make(map[string]string)
 }
 
-func (d *Drop) Step() {
+func (d *Drop) SetLearning(learning bool) {
+	d.region0.Learning = false
+	d.region1.Learning = false
+	//d.region2.Learning = false
+	d.region3.Learning = false
+	fmt.Fprintf(d.Output, "\nLearning = %t\n", learning)
+}
+
+func (d *Drop) Step() (recognized int) {
 	d.step++
 	input, err := d.Input.Next()
 	if err != nil {
@@ -57,19 +68,30 @@ func (d *Drop) Step() {
 		return
 	}
 
-	fmt.Fprintf(d.Output, "\n>>> Step %d: %v\n", d.step, input)
+	fmt.Fprintf(d.Output, "\n%d) Input = %v", d.step, input)
 	//input.Value.Print(16, d.Output)
 	d.region0.ConsumeInput(input.Value)
-	d.region3.ConsumeInput(d.region0.Output())
+	d.region1.ConsumeInput(d.region0.Output())
+	d.region3.ConsumeInput(d.region1.Output())
 	val := d.region3.Output().String()
 	if pat, ok := d.patterns[val]; ok {
-		fmt.Fprintf(d.Output, "\nRecognized as %s", pat)
+		if pat == input.Name {
+			fmt.Fprintf(d.Output, ", recognized as %s.", pat)
+			recognized = 1
+		} else {
+			fmt.Fprintf(d.Output, ", mislabeled as %s.", pat)
+			recognized = 0
+		}
 	} else {
-		fmt.Fprintf(d.Output, "\nNew pattern for input: %s\n", input.Name)
+		recognized = -1
+		fmt.Fprintf(d.Output, ", new pattern\n")
 		d.region0.Print(d.Output)
 		d.region3.Print(d.Output)
-		d.patterns[val] = input.Name
+		if d.region3.Learning {
+			d.patterns[val] = input.Name
+		}
 	}
+	return
 }
 
 func TestDrop(t *testing.T) {
@@ -79,15 +101,53 @@ func TestDrop(t *testing.T) {
 		t.FailNow()
 	}
 	src := htm.NewInputSource("Drop", dec)
+	out, err := os.Create("drop_output.txt")
+	if err != nil {
+		t.Error(err)
+		t.FailNow()
+	}
+
 	drop := Drop{
 		Running: true,
 		Input:   src,
-		Output:  os.Stdout,
+		Output:  out,
 		t:       t}
 	drop.InitializeNetwork()
 	go drop.Generate()
-	for drop.step < 100 {
-		drop.Step()
+	lastLearned := 0
+	numRecognized := 0
+	for numRecognized < 10 && drop.step-lastLearned < 1000 && drop.step < 1000000 {
+		recognized := drop.Step()
+		if recognized == 1 {
+			numRecognized++
+			fmt.Print("v")
+		} else if recognized == 0 {
+			numRecognized = 0
+			fmt.Print("x")
+		} else {
+			numRecognized = 0
+			lastLearned = drop.step
+			fmt.Print(".")
+		}
 	}
-	fmt.Fprintf(drop.Output, "\nDone.\n")
+
+	lastStep := drop.step
+	drop.SetLearning(false)
+	fmt.Printf("\nLearning = %t\n", false)
+
+	numRecognized = 0
+	for i := 0; i < 10; i++ {
+		recognized := drop.Step()
+		if recognized == 1 {
+			numRecognized++
+			fmt.Print("v")
+		} else if recognized == 0 {
+			fmt.Print("x")
+		} else {
+			fmt.Print("x")
+		}
+	}
+
+	fmt.Printf("\nDone after %d steps, recognizing %d patterns.\n", lastStep, numRecognized)
+	fmt.Fprintf(drop.Output, "\nDone after %d steps, recognizing %d patterns.\n", lastStep, numRecognized)
 }

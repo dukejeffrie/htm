@@ -2,6 +2,7 @@
 
 package htm
 
+import "bufio"
 import "fmt"
 import "io"
 import "math/rand"
@@ -70,7 +71,7 @@ func (c *Column) Activate() {
 	}
 }
 
-func (c Column) ToByte(idx int) byte {
+func (c Column) ToRune(idx int) rune {
 	if c.active.IsSet(idx) {
 		if c.predicted.IsSet(idx) {
 			return 'x'
@@ -83,11 +84,17 @@ func (c Column) ToByte(idx int) byte {
 	return '-'
 }
 
-func (c Column) Print(writer io.Writer) error {
-	bytes := make([]byte, c.Height())
+func (c Column) Print(width int, writer io.Writer) error {
+	buf := bufio.NewWriter(writer)
 	for i := 0; i < c.Height(); i++ {
-		bytes[i] = c.ToByte(i)
+		if _, err := buf.WriteRune(c.ToRune(i)); err != nil {
+			return err
+		}
+		if (i+1)%width == 0 {
+			if _, err := buf.WriteRune('\n'); err != nil {
+				return err
+			}
+		}
 	}
-	_, err := writer.Write(bytes)
-	return err
+	return buf.Flush()
 }

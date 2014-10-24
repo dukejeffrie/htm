@@ -128,20 +128,24 @@ func (l *Region) Output() Bitset {
 }
 
 func (l *Region) Learn(input Bitset) {
-	if len(l.scratch.scores) > 0 {
-		for _, el := range l.scratch.scores {
-			col := l.columns[el.index]
-			col.LearnFromInput(input)
-		}
+	for _, col := range l.columns {
+		col.LearnFromInput(input)
 	}
 }
 
 func (l Region) Print(writer io.Writer) {
 	fmt.Fprintf(writer, "\n=== %s (learning: %t) ===\n", l.Name, l.Learning)
-	for i := 8; i < len(l.columns) && i <= 64; i += 8 {
+	for i := 8; i < len(l.columns) && i <= 80; i += 8 {
 		fmt.Fprintf(writer, "%8d", i)
 	}
 	fmt.Fprintln(writer)
-	l.Output().Print(64, writer)
+	rem := 80
+	for _, c := range l.columns {
+		c.Print(rem, writer)
+		rem -= c.Height()
+		if rem <= 0 {
+			rem = 80
+		}
+	}
 	fmt.Fprintln(writer)
 }

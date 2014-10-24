@@ -26,7 +26,7 @@ func TestPrintColumn(t *testing.T) {
 	reader, writer := io.Pipe()
 
 	go func() {
-		werr := col.Print(writer)
+		werr := col.Print(col.Height(), writer)
 		if werr != nil {
 			t.Error(werr)
 		}
