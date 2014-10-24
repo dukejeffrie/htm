@@ -59,11 +59,11 @@ func NewCategoryDecoder(n, w int) (DecoderFunction, error) {
 		if !ok {
 			out = *NewBitset(n)
 			for i := 0; i < w; i++ {
-				out.Set([]int{rand.Intn(n)})
+				out.Set(rand.Intn(n))
 			}
 			// In the rare case where rand produces the same number twice, we'll be missing a few. Keep trying until we're good.
 			for out.NumSetBits() < w {
-				out.Set([]int{rand.Intn(n)})
+				out.Set(rand.Intn(n))
 			}
 			bits[key] = out
 		}

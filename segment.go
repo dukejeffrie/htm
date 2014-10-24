@@ -26,7 +26,7 @@ func NewDendriteSegment(num_bits int, connected []int) *DendriteSegment {
 		ds.permanence[v] = INITIAL_PERMANENCE
 	}
 	ds.synapses = NewBitset(num_bits)
-	ds.synapses.Set(connected)
+	ds.synapses.Set(connected...)
 	return ds
 }
 
@@ -43,7 +43,7 @@ func (ds *DendriteSegment) Learn(input Bitset) {
 				ds.synapses.ClearOne(k)
 			}
 		} else if v2 >= CONNECTION_THRESHOLD {
-			ds.synapses.SetOne(k)
+			ds.synapses.Set(k)
 		}
 	}
 }

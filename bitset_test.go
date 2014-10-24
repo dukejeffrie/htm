@@ -49,19 +49,19 @@ func TestConstruction(t *testing.T) {
 func TestSetAndReset(t *testing.T) {
 	b := NewBitset(2048)
 
-	b.Set([]int{127})
+	b.Set(127)
 	ExpectEquals(t, "bit 127", true, b.IsSet(127))
 
-	b.Set([]int{11, 12})
+	b.Set(11, 12)
 	ExpectEquals(t, "bit 127", true, b.IsSet(127))
 	ExpectEquals(t, "num bits", 3, b.NumSetBits())
 
 	b.Reset()
 	ExpectEquals(t, "bit 127", false, b.IsSet(127))
 
-	b.Set([]int{222, 444, 888, 1023, 1024, 1331, 2047})
+	b.Set(222, 444, 888, 1023, 1024, 1331, 2047)
 	ExpectEquals(t, "num bits", 7, b.NumSetBits())
-	b.SetOne(111)
+	b.Set(111)
 	ExpectEquals(t, "bit 111", true, b.IsSet(111))
 	b.ClearOne(111)
 	ExpectEquals(t, "bit 111", false, b.IsSet(111))
@@ -79,7 +79,7 @@ func TestSetRange(t *testing.T) {
 
 func TestIndexing(t *testing.T) {
 	b := NewBitset(64)
-	b.Set([]int{1, 3})
+	b.Set(1, 3)
 
 	ExpectEquals(t, "first integer", uint64(8+2), b.binary[0])
 
@@ -96,8 +96,8 @@ func TestAppend(t *testing.T) {
 	scratch := make([]int, 20)
 
 	src := NewBitset(5)
-	src.SetOne(1)
-	src.SetOne(4)
+	src.Set(1)
+	src.Set(4)
 
 	dest := NewBitset(5)
 	dest.Append(*src)
@@ -114,11 +114,11 @@ func TestAppend(t *testing.T) {
 func TestAppendLong(t *testing.T) {
 	scratch := make([]int, 20)
 	dest := NewBitset(20)
-	dest.SetOne(10)
+	dest.Set(10)
 	src := NewBitset(60)
-	src.SetOne(2)
-	src.SetOne(22)
-	src.SetOne(59)
+	src.Set(2)
+	src.Set(22)
+	src.Set(59)
 
 	dest.Append(*src)
 	ExpectEquals(t, "length", 80, dest.Len())
@@ -128,7 +128,7 @@ func TestAppendLong(t *testing.T) {
 func AppendBenchmarkTemplate(b *testing.B, src_size, dest_size int,
 	truncate bool) {
 	src := NewBitset(src_size)
-	src.Set([]int{2, src_size / 2, (src_size - 1) / 2 * 2})
+	src.Set(2, src_size/2, (src_size-1)/2*2)
 	b.ResetTimer()
 	dest := NewBitset(dest_size)
 	for i := 0; i < b.N; i++ {
@@ -175,7 +175,7 @@ func BenchmarkAppendOdd2048T(b *testing.B) {
 
 func SetFromBitsetAtBenchmarkTemplate(b *testing.B, src_size int) {
 	src := NewBitset(src_size)
-	src.Set([]int{1, 3, 5})
+	src.Set(1, 3, 5)
 	b.ResetTimer()
 	dest := NewBitset(20480)
 	b.ResetTimer()
@@ -194,9 +194,9 @@ func BenchmarkSetFromBitsetAt2048(b *testing.B) {
 
 func TestPrintBitset(t *testing.T) {
 	even := NewBitset(64)
-	even.Set([]int{2, 4, 8, 16, 32})
+	even.Set(2, 4, 8, 16, 32)
 	odd := NewBitset(64)
-	odd.Set([]int{1, 3, 7, 15, 31})
+	odd.Set(1, 3, 7, 15, 31)
 
 	reader, writer := io.Pipe()
 
@@ -236,15 +236,18 @@ func SetBenchmarkTemplate(b *testing.B, n, l int) {
 	rand.Seed(int64(b.N))
 	bitset := NewBitset(n)
 	bits_to_set := make([]int, l)
-	for i := 0; i > l; i++ {
+	for i := 0; i < l; i++ {
 		bits_to_set[i] = rand.Intn(n)
 	}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		bitset.Set(bits_to_set)
+		bitset.Set(bits_to_set...)
 	}
 }
 
+func BenchmarkSet1(b *testing.B) {
+	SetBenchmarkTemplate(b, 2048, 1)
+}
 func BenchmarkSet10(b *testing.B) {
 	SetBenchmarkTemplate(b, 2048, 10)
 }
@@ -253,26 +256,6 @@ func BenchmarkSet100(b *testing.B) {
 }
 func BenchmarkSet1000(b *testing.B) {
 	SetBenchmarkTemplate(b, 2048, 1000)
-}
-
-func SetOneBenchmarkTemplate(b *testing.B, n, w int) {
-	rand.Seed(int64(b.N))
-	bitset := NewBitset(n)
-	start := rand.Intn(n)
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		bitset.SetOne(start)
-	}
-}
-
-func BenchmarkSetOne10(b *testing.B) {
-	SetOneBenchmarkTemplate(b, 2048, 10)
-}
-func BenchmarkSetOne100(b *testing.B) {
-	SetOneBenchmarkTemplate(b, 2048, 100)
-}
-func BenchmarkSetOne1000(b *testing.B) {
-	SetOneBenchmarkTemplate(b, 2048, 1000)
 }
 
 func SetRangeBenchmarkTemplate(b *testing.B, n, w int) {
@@ -299,10 +282,10 @@ func ToIndexesBenchmarkTemplate(b *testing.B, n, l int) {
 	rand.Seed(int64(1979))
 	bitset := NewBitset(n)
 	bits_to_set := make([]int, l)
-	for i := 0; i > l; i++ {
+	for i := 0; i < l; i++ {
 		bits_to_set[i] = rand.Intn(n)
 	}
-	bitset.Set(bits_to_set)
+	bitset.Set(bits_to_set...)
 	b.ResetTimer()
 	output := make([]int, bitset.NumSetBits())
 	for i := 0; i < b.N; i++ {

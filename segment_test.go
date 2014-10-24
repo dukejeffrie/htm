@@ -20,7 +20,7 @@ func TestLearnSynapses(t *testing.T) {
 	connections := []int{1, 3, 5, 8, 13}
 	ds := NewDendriteSegment(64, connections)
 	input := NewBitset(64)
-	input.Set([]int{1, 5, 22})
+	input.Set(1, 5, 22)
 	ds.Learn(*input)
 	t.Log(ds.permanence)
 	if ds.permanence[1] == ds.permanence[3] {

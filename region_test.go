@@ -107,7 +107,7 @@ func BenchmarkConsumeInput(b *testing.B) {
 	l.ResetForInput(2048, 28)
 
 	input := NewBitset(2048)
-	input.Set(columnRand.Perm(2048)[0:28])
+	input.Set(columnRand.Perm(2048)[0:28]...)
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {

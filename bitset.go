@@ -61,8 +61,12 @@ func (b *Bitset) Reset() {
 	}
 }
 
-func (b *Bitset) Set(indices []int) {
+func (b *Bitset) Set(indices ...int) {
 	if len(indices) == 0 {
+		return
+	}
+	if len(indices) == 1 {
+		b.binary[indices[0]/64] |= 1 << uint64(indices[0]%64)
 		return
 	}
 	sort.Ints(indices)
@@ -107,11 +111,6 @@ func (b *Bitset) SetRange(start, end int) {
 		b.binary[pos] |= mask
 		pos++
 	}
-}
-
-func (b *Bitset) SetOne(index int) {
-	pos, offset := index/64, index%64
-	b.binary[pos] |= 1 << uint64(offset)
 }
 
 func (b *Bitset) ClearOne(index int) {

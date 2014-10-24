@@ -9,7 +9,7 @@ func BenchmarkOverlap(b *testing.B) {
 	connections := []int{1, 3, 5, 8, 11}
 	c.ResetConnections(64, connections)
 	input := NewBitset(64)
-	input.Set([]int{1, 5, 22})
+	input.Set(1, 5, 22)
 	result := NewBitset(64)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -21,8 +21,8 @@ func BenchmarkOverlap(b *testing.B) {
 func TestPrintColumn(t *testing.T) {
 	col := NewColumn(5)
 	col.ResetConnections(64, []int{1, 10, 11, 20})
-	col.predicted.Set([]int{3, 4})
-	col.active.Set([]int{1, 3})
+	col.predicted.Set(3, 4)
+	col.active.Set(1, 3)
 	reader, writer := io.Pipe()
 
 	go func() {
