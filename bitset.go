@@ -8,7 +8,6 @@ import "fmt"
 import "bufio"
 import "io"
 import "strings"
-import "sort"
 
 // A bitset type.
 type Bitset struct {
@@ -62,31 +61,8 @@ func (b *Bitset) Reset() {
 }
 
 func (b *Bitset) Set(indices ...int) {
-	if len(indices) == 0 {
-		return
-	}
-	if len(indices) == 1 {
-		b.binary[indices[0]/64] |= 1 << uint64(indices[0]%64)
-		return
-	}
-	sort.Ints(indices)
-	idx := 0
-	for pos, el := range b.binary {
-		if idx >= len(indices) {
-			return
-		}
-		if indices[idx] > b.Len() {
-			panic(fmt.Sprintf(
-				"index %v is larger than the length of this bitset (length=%v",
-				indices[idx], b.Len()))
-		}
-		min_idx, max_idx := pos*64, (pos+1)*64
-		for ; idx < len(indices) &&
-			indices[idx] >= min_idx &&
-			indices[idx] < max_idx; idx++ {
-			el |= 1 << uint64(indices[idx]-min_idx)
-		}
-		b.binary[pos] = el
+	for _, v := range indices {
+		b.binary[v/64] |= 1 << uint64(v%64)
 	}
 }
 
