@@ -89,9 +89,10 @@ func (b *Bitset) SetRange(start, end int) {
 	}
 }
 
-func (b *Bitset) ClearOne(index int) {
-	pos, offset := index/64, index%64
-	b.binary[pos] &= ^(1 << uint64(offset))
+func (b *Bitset) Unset(indices ...int) {
+	for _, v := range indices {
+		b.binary[v/64] &= ^(1 << uint64(v%64))
+	}
 }
 
 func (b Bitset) String() string {

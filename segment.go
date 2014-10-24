@@ -40,7 +40,7 @@ func (ds *DendriteSegment) Learn(input Bitset) {
 		v2 := ds.permanence[k]
 		if v >= CONNECTION_THRESHOLD {
 			if v2 < CONNECTION_THRESHOLD {
-				ds.synapses.ClearOne(k)
+				ds.synapses.Unset(k)
 			}
 		} else if v2 >= CONNECTION_THRESHOLD {
 			ds.synapses.Set(k)

@@ -63,7 +63,7 @@ func TestSetAndReset(t *testing.T) {
 	ExpectEquals(t, "num bits", 7, b.NumSetBits())
 	b.Set(111)
 	ExpectEquals(t, "bit 111", true, b.IsSet(111))
-	b.ClearOne(111)
+	b.Unset(111)
 	ExpectEquals(t, "bit 111", false, b.IsSet(111))
 }
 
