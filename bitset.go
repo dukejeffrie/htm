@@ -39,6 +39,10 @@ func (b Bitset) ToIndexes(indices []int) []int {
 	return indices[0:dest]
 }
 
+func (b Bitset) GetUint(index int) uint64 {
+	return b.binary[index]
+}
+
 func (b Bitset) NumSetBits() int {
 	// This algorithm behaves well only when the number of set bits is small.
 	count := 0

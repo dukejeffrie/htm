@@ -73,14 +73,14 @@ func (c *Column) Activate() {
 func (c Column) ToByte(idx int) byte {
 	if c.active.IsSet(idx) {
 		if c.predicted.IsSet(idx) {
-			return 'v'
+			return 'x'
 		} else {
 			return '!'
 		}
 	} else if c.predicted.IsSet(idx) {
 		return 'o'
 	}
-	return '.'
+	return '-'
 }
 
 func (c Column) Print(writer io.Writer) error {

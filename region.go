@@ -137,10 +137,11 @@ func (l *Region) Learn(input Bitset) {
 }
 
 func (l Region) Print(writer io.Writer) {
-	fmt.Fprintf(writer, "\n=== %s (learning: %t) ===", l.Name, l.Learning)
-	for i, col := range l.columns {
-		fmt.Fprintf(writer, "\n%d. ", i)
-		col.Print(writer)
+	fmt.Fprintf(writer, "\n=== %s (learning: %t) ===\n", l.Name, l.Learning)
+	for i := 8; i < len(l.columns) && i <= 64; i += 8 {
+		fmt.Fprintf(writer, "%8d", i)
 	}
+	fmt.Fprintln(writer)
+	l.Output().Print(64, writer)
 	fmt.Fprintln(writer)
 }

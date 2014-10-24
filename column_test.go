@@ -37,7 +37,7 @@ func TestPrintColumn(t *testing.T) {
 	if _, rerr := fmt.Fscan(reader, &s1); rerr != nil {
 		t.Error(rerr)
 	}
-	expected := ".!.vo"
+	expected := "-!-xo"
 	if s1 != expected {
 		t.Errorf("Print doesn't match: %v != %v", expected, s1)
 	}
