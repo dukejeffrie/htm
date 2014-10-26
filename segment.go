@@ -10,6 +10,16 @@ const (
 	PERMANENCE_DEC       = float32(0.05)
 )
 
+func Permanence(v float32) float32 {
+	if v > 1.0 {
+		return 1.0
+	} else if v < 0.0 {
+		return 0.0
+	} else {
+		return v
+	}
+}
+
 type CycleHistory struct {
 	events *Bitset
 	cycle  int
@@ -80,10 +90,24 @@ func (ds *DendriteSegment) Learn(input Bitset, active bool, minOverlap int) {
 	ds.activationHistory.Record(active)
 	if active {
 		ds.Narrow(input)
+		ds.Boost = 0.0
 	} else {
 		ds.Broaden(input, minOverlap)
 		if avg, ok := ds.activationHistory.Average(); ok && avg < ds.MinActivityRatio {
 			ds.Boost *= 1.05
+		}
+	}
+}
+
+func (ds *DendriteSegment) SetPermanence(k int, v float32) {
+	v = Permanence(v)
+	ds.permanence[k] = v
+	if v >= CONNECTION_THRESHOLD {
+		ds.synapses.Set(k)
+	} else {
+		ds.synapses.Unset(k)
+		if v < PERMANENCE_MIN {
+			delete(ds.permanence, k)
 		}
 	}
 }
@@ -98,32 +122,28 @@ func (ds *DendriteSegment) Narrow(input Bitset) {
 		} else {
 			v -= PERMANENCE_DEC
 		}
-		ds.permanence[k] = v
-		if v >= CONNECTION_THRESHOLD {
-			ds.synapses.Set(k)
-		} else {
-			ds.synapses.Unset(k)
-			if v < PERMANENCE_MIN {
-				delete(ds.permanence, k)
-			}
-		}
+		ds.SetPermanence(k, v)
 	}
 }
 
 func (ds *DendriteSegment) Broaden(input Bitset, minOverlap int) {
 	overlapCount := 0
+	newPermanence := PERMANENCE_MIN + ds.Boost
+	if newPermanence > CONNECTION_THRESHOLD {
+		newPermanence = CONNECTION_THRESHOLD
+	}
 	for _, k := range input.ToIndexes(make([]int, input.NumSetBits())) {
 		v, ok := ds.permanence[k]
-		if !ok || v < PERMANENCE_MIN {
-			ds.permanence[k] = PERMANENCE_MIN
+		if !ok || v < newPermanence {
+			ds.SetPermanence(k, newPermanence)
 		} else if v >= CONNECTION_THRESHOLD {
 			overlapCount++
 		}
 	}
 	ds.overlapHistory.Record(overlapCount >= minOverlap)
 	if avg, ok := ds.overlapHistory.Average(); ok && avg < ds.MinActivityRatio {
-		for k, _ := range ds.permanence {
-			ds.permanence[k] *= 1.01
+		for k, v := range ds.permanence {
+			ds.SetPermanence(k, v*1.01)
 		}
 	}
 }
