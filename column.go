@@ -52,8 +52,8 @@ func (c Column) Boost() float32 {
 	return c.proximal.Boost
 }
 
-func (c *Column) ResetConnections(num_bits int, connected []int) {
-	c.proximal = NewDendriteSegment(num_bits, connected)
+func (c *Column) ResetConnections(numBits int, connected []int) {
+	c.proximal = NewDendriteSegment(numBits, connected)
 	c.proximal.Boost = columnRand.Float32() * 0.00001
 }
 

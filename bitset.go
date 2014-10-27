@@ -73,16 +73,16 @@ func (b *Bitset) SetRange(start, end int) {
 	}
 	pos := start / 64
 	for pos < len(b.binary) {
-		min_idx, max_idx := pos*64, (pos+1)*64
-		if end <= min_idx {
+		minIdx, maxIdx := pos*64, (pos+1)*64
+		if end <= minIdx {
 			return
 		}
 		mask := ^uint64(0)
-		if start > min_idx {
-			mask = mask << uint64(start-min_idx)
+		if start > minIdx {
+			mask = mask << uint64(start-minIdx)
 		}
-		if end < max_idx {
-			mask &= ^uint64(0) >> uint64(max_idx-end)
+		if end < maxIdx {
+			mask &= ^uint64(0) >> uint64(maxIdx-end)
 		}
 		b.binary[pos] |= mask
 		pos++

@@ -32,24 +32,27 @@ func TryToLearn(t *testing.T, maxTries int, ds *htm.DendriteSegment,
 }
 
 func TestLearn64PatternA_5(t *testing.T) {
+	rand.Seed(1979)
 	ds := htm.NewDendriteSegment(64, []int{1, 3, 5, 8, 13, 21})
 	patternA := htm.NewBitset(64)
 	patternA.Set(2, 4, 22, 24, 42, 44, 62)
-	TryToLearn(t, 20, ds, 5, *patternA)
+	TryToLearn(t, 80, ds, 5, *patternA)
 	t.Log(ds.Connected())
 }
 
 func TestLearn64PatternAB_5(t *testing.T) {
+	rand.Seed(1979)
 	ds := htm.NewDendriteSegment(64, []int{1, 3, 5, 8, 13, 21})
 	patternA := htm.NewBitset(64)
 	patternA.Set(2, 4, 22, 24, 42, 44, 62)
 	patternB := htm.NewBitset(64)
 	patternB.Set(22, 23, 24, 25, 26)
-	TryToLearn(t, 50, ds, 5, *patternA, *patternB)
+	TryToLearn(t, 90, ds, 5, *patternA, *patternB)
 	t.Log(ds.Connected())
 }
 
 func TestLearn64PatternABC_5(t *testing.T) {
+	rand.Seed(1979)
 	ds := htm.NewDendriteSegment(64, []int{1, 3, 5, 8, 13, 21})
 	patternA := htm.NewBitset(64)
 	patternA.Set(2, 4, 22, 24, 42, 44, 62)
@@ -57,6 +60,6 @@ func TestLearn64PatternABC_5(t *testing.T) {
 	patternB.Set(22, 23, 24, 25, 26)
 	patternC := htm.NewBitset(64)
 	patternC.Set(3, 13, 21, 39, 47)
-	TryToLearn(t, 200000, ds, 5, *patternA, *patternB, *patternC)
+	TryToLearn(t, 110, ds, 5, *patternA, *patternB, *patternC)
 	t.Log(ds.Connected())
 }

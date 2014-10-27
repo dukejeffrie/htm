@@ -72,13 +72,13 @@ func NewCategoryDecoder(n, w int) (DecoderFunction, error) {
 }
 
 func NewScalarDecoder(n, w, min, max int) (DecoderFunction, error) {
-	bucket_size := (max - min) / (n - w + 1)
-	if bucket_size < 1 {
-		bucket_size = 1
+	bucketSize := (max - min) / (n - w + 1)
+	if bucketSize < 1 {
+		bucketSize = 1
 	}
 	return func(in RawInput) (out Bitset, err error) {
 		val := in.IntValue
-		bucket := (val - min) / bucket_size
+		bucket := (val - min) / bucketSize
 		out = *NewBitset(n)
 		out.SetRange(bucket, bucket+w)
 		return out, nil

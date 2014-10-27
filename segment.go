@@ -70,14 +70,14 @@ func (ds DendriteSegment) Connected() Bitset {
 	return *ds.synapses
 }
 
-func NewDendriteSegment(num_bits int, connected []int) *DendriteSegment {
+func NewDendriteSegment(numBits int, connected []int) *DendriteSegment {
 	ds := &DendriteSegment{
 		MinActivityRatio:  0.02,
 		Boost:             0,
 		permanence:        make(map[int]float32, len(connected)),
 		overlapHistory:    NewCycleHistory(100),
 		activationHistory: NewCycleHistory(100),
-		synapses:          NewBitset(num_bits),
+		synapses:          NewBitset(numBits),
 	}
 	for _, v := range connected {
 		ds.permanence[v] = INITIAL_PERMANENCE

@@ -49,14 +49,14 @@ func TestConsumeInput(t *testing.T) {
 	t.Log(output)
 
 	// Let's store all the top cells connections into the input bit, so we get them again the second time around.
-	next_input := NewBitset(64)
+	nextInput := NewBitset(64)
 
 	for _, el := range l.scratch.scores {
 		col := l.columns[el.index]
-		next_input.Or(col.Connected())
+		nextInput.Or(col.Connected())
 	}
-	last_scores := make([]ScoredElement, l.scratch.scores.Len())
-	copy(last_scores, l.scratch.scores)
+	lastScores := make([]ScoredElement, l.scratch.scores.Len())
+	copy(lastScores, l.scratch.scores)
 
 	l.ConsumeInput(*NewBitset(64))
 	if l.scratch.scores.Len() != 0 {
@@ -70,8 +70,8 @@ func TestConsumeInput(t *testing.T) {
 		t.Errorf("Empty input caused non-empty output: %v", output2)
 	}
 
-	l.ConsumeInput(*next_input)
-	for _, old := range last_scores {
+	l.ConsumeInput(*nextInput)
+	for _, old := range lastScores {
 		found := false
 		for _, el := range l.scratch.scores {
 			if old.index == el.index {

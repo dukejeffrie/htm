@@ -54,8 +54,8 @@ type Region struct {
 }
 
 // Creates a new named region with this many columns.
-func NewRegion(name string, width, height int, firing_ratio float64) *Region {
-	maxFiringColumns := int(math.Ceil(float64(width)*firing_ratio)) + 1
+func NewRegion(name string, width, height int, firingRatio float64) *Region {
+	maxFiringColumns := int(math.Ceil(float64(width)*firingRatio)) + 1
 	result := &Region{
 		columns: make([]*Column, width),
 		output:  NewBitset(width * height),
@@ -103,9 +103,9 @@ func (l *Region) ConsumeInput(input Bitset) {
 		c.active.Reset()
 		l.scratch.overlap.CopyFrom(c.Connected())
 		l.scratch.overlap.And(input)
-		overlap_score := l.scratch.overlap.NumSetBits()
-		if overlap_score >= l.MinOverlap {
-			score := float32(overlap_score) + c.Boost()
+		overlapScore := l.scratch.overlap.NumSetBits()
+		if overlapScore >= l.MinOverlap {
+			score := float32(overlapScore) + c.Boost()
 			heap.Push(&l.scratch.scores, ScoredElement{i, score})
 			if l.scratch.scores.Len() > l.maxFiringColumns {
 				heap.Pop(&l.scratch.scores)
