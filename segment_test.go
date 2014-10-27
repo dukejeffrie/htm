@@ -37,12 +37,22 @@ func TestNarrowSynapses(t *testing.T) {
 	}
 }
 
-func TestBroaden(t *testing.T) {
+func BenchmarkNarrowSynapses(b *testing.B) {
 	ds := NewDendriteSegment(64, []int{1, 3, 5, 8, 13})
 	input := NewBitset(64)
 	input.Set(1, 5, 22)
-	for i := 0; i < 1000 && ds.permanence[5] >= CONNECTION_THRESHOLD; i++ {
+	for i := 0; i < b.N; i++ {
 		ds.Narrow(*input)
+	}
+}
+
+func TestBroadenSynapses(t *testing.T) {
+	ds := NewDendriteSegment(64, []int{1, 3, 5, 8, 13})
+	input := NewBitset(64)
+	input.Set(1, 5, 22)
+	for i := 0; i < 1000 && ds.permanence[3] >= PERMANENCE_MIN; i++ {
+		ds.Narrow(*input)
+		t.Log(ds)
 	}
 	if ds.permanence[22] != 0 {
 		t.Errorf("Permanence for non-connected should be zero: %v", ds.permanence)
@@ -50,14 +60,24 @@ func TestBroaden(t *testing.T) {
 	input.Reset()
 	input.Set(1, 8, 22)
 	ds.Broaden(*input, 0)
-	if ds.permanence[1] == ds.permanence[3] {
+	t.Log(ds)
+	if ds.permanence[1] <= ds.permanence[3] {
 		t.Errorf("Permanence scores did not improve: %v", ds.permanence)
 	}
-	if ds.permanence[1] != ds.permanence[5] || ds.permanence[1] != ds.permanence[5] {
+	if ds.permanence[1] != ds.permanence[5] {
 		t.Errorf("Permanence scores must be uniform: %v", ds.permanence)
 	}
-	if ds.permanence[22] != PERMANENCE_MIN {
+	if ds.permanence[8] != PERMANENCE_MIN || ds.permanence[22] != PERMANENCE_MIN {
 		t.Errorf("Permanence for broadened synapse should be %d: %v", PERMANENCE_MIN, ds.permanence)
+	}
+}
+
+func BenchmarkBroadenSynapses(b *testing.B) {
+	ds := NewDendriteSegment(64, []int{1, 3, 5, 8, 13})
+	input := NewBitset(64)
+	input.Set(1, 5, 22)
+	for i := 0; i < b.N; i++ {
+		ds.Broaden(*input, 0)
 	}
 }
 

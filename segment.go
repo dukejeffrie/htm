@@ -2,6 +2,8 @@
 
 package htm
 
+import "fmt"
+
 const (
 	CONNECTION_THRESHOLD = 0.6
 	INITIAL_PERMANENCE   = 0.6
@@ -64,6 +66,13 @@ type DendriteSegment struct {
 	synapses          *Bitset
 	overlapHistory    *CycleHistory
 	activationHistory *CycleHistory
+}
+
+func (ds DendriteSegment) String() string {
+	ac, _ := ds.activationHistory.Average()
+	ov, _ := ds.overlapHistory.Average()
+	return fmt.Sprintf("Dendrite{activationAvg=%f, overlapAvg=%f, boost=%f, perm=%v, syn=%v}",
+		ac, ov, ds.Boost, ds.permanence, ds.synapses)
 }
 
 func (ds DendriteSegment) Connected() Bitset {

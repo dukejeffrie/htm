@@ -15,6 +15,7 @@ func TryToLearn(t *testing.T, maxTries int, ds *htm.DendriteSegment,
 		overlap.And(ds.Connected())
 		active := overlap.NumSetBits() >= minOverlap || rand.Float32()+ds.Boost > 3.0
 		ds.Learn(input, active, minOverlap)
+		t.Log("round:", result, ds)
 		result++
 		if active {
 			fmt.Print("N")
@@ -37,7 +38,7 @@ func TestLearn64PatternA_5(t *testing.T) {
 	patternA := htm.NewBitset(64)
 	patternA.Set(2, 4, 22, 24, 42, 44, 62)
 	TryToLearn(t, 80, ds, 5, *patternA)
-	t.Log(ds.Connected())
+	t.Log(ds)
 }
 
 func TestLearn64PatternAB_5(t *testing.T) {
