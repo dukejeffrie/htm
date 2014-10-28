@@ -59,7 +59,7 @@ func TestBroadenSynapses(t *testing.T) {
 	}
 	input.Reset()
 	input.Set(1, 8, 22)
-	ds.Broaden(*input, 0)
+	ds.broaden(*input, 0)
 	t.Log(ds)
 	if ds.permanence[1] <= ds.permanence[3] {
 		t.Errorf("Permanence scores did not improve: %v", ds.permanence)
@@ -77,7 +77,7 @@ func BenchmarkBroadenSynapses(b *testing.B) {
 	input := NewBitset(64)
 	input.Set(1, 5, 22)
 	for i := 0; i < b.N; i++ {
-		ds.Broaden(*input, 0)
+		ds.broaden(*input, 0)
 	}
 }
 
