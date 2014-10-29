@@ -38,6 +38,18 @@ func (b Bitset) ToIndexes(indices []int) []int {
 	return indices[0:dest]
 }
 
+func (b Bitset) Overlap(other Bitset) int {
+	// This algorithm behaves well only when the number of set bits is small.
+	count := 0
+	for i, el := range b.binary {
+		v := el & other.binary[i]
+		for ; v != 0; count++ {
+			v &= v - 1
+		}
+	}
+	return count
+}
+
 func (b Bitset) GetUint(index int) uint64 {
 	return b.binary[index]
 }
@@ -54,6 +66,15 @@ func (b Bitset) NumSetBits() int {
 	return count
 }
 
+func (b Bitset) IsZero() bool {
+	for _, el := range b.binary {
+		if el != 0 {
+			return false
+		}
+	}
+	return true
+}
+
 func (b *Bitset) Reset() {
 	for i := 0; i < len(b.binary); i++ {
 		b.binary[i] = uint64(0)
@@ -62,7 +83,9 @@ func (b *Bitset) Reset() {
 
 func (b *Bitset) Set(indices ...int) {
 	for _, v := range indices {
-		b.binary[v/64] |= 1 << uint64(v%64)
+		if v >= 0 && v < b.length {
+			b.binary[v/64] |= 1 << uint64(v%64)
+		}
 	}
 }
 
@@ -70,6 +93,9 @@ func (b *Bitset) Set(indices ...int) {
 func (b *Bitset) SetRange(start, end int) {
 	if end <= start {
 		return
+	}
+	if end > b.length {
+		end = b.length
 	}
 	pos := start / 64
 	for pos < len(b.binary) {
@@ -91,7 +117,9 @@ func (b *Bitset) SetRange(start, end int) {
 
 func (b *Bitset) Unset(indices ...int) {
 	for _, v := range indices {
-		b.binary[v/64] &= ^(1 << uint64(v%64))
+		if v >= 0 && v < b.length {
+			b.binary[v/64] &= ^(1 << uint64(v%64))
+		}
 	}
 }
 
@@ -122,6 +150,10 @@ func (b Bitset) Equals(other Bitset) bool {
 }
 
 func (b *Bitset) CopyFrom(other Bitset) {
+	if b.Len() != other.Len() {
+		panic(fmt.Errorf(
+			"Cannot copy from bitset of different length (%d != %d)", b.Len(), other.Len()))
+	}
 	copy(b.binary, other.binary)
 }
 

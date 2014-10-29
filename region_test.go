@@ -13,7 +13,7 @@ func TestMinOverlap(t *testing.T) {
 	l.ConsumeInput(*input)
 	output := l.Output()
 
-	if output.NumSetBits() == 0 {
+	if output.IsZero() {
 		t.Errorf("Output is empty: %v", output)
 	}
 	t.Log(output)
@@ -21,7 +21,7 @@ func TestMinOverlap(t *testing.T) {
 	l.MinOverlap = 4
 	l.ConsumeInput(*input)
 	output = l.Output()
-	if output.NumSetBits() != 0 {
+	if !output.IsZero() {
 		t.Errorf("Output should be empty: %v", output)
 	}
 }
@@ -43,7 +43,7 @@ func TestConsumeInput(t *testing.T) {
 	if output.Len() != 50*4 {
 		t.Errorf("Weird output length (expected %d, got: %d).", 50*4, output.Len())
 	}
-	if output.NumSetBits() == 0 {
+	if output.IsZero() {
 		t.Errorf("Output is empty: %v", output)
 	}
 	t.Log(output)
@@ -66,7 +66,7 @@ func TestConsumeInput(t *testing.T) {
 	if output2.Len() != 50*4 {
 		t.Errorf("Weird output length (expected %d, got: %d).", 50*4, output2.Len())
 	}
-	if output2.NumSetBits() != 0 {
+	if !output2.IsZero() {
 		t.Errorf("Empty input caused non-empty output: %v", output2)
 	}
 
@@ -86,7 +86,7 @@ func TestConsumeInput(t *testing.T) {
 	}
 
 	output3 := l.Output()
-	if output3.NumSetBits() == 0 {
+	if output3.IsZero() {
 		t.Errorf("Output is empty: %v", output3)
 	}
 	if output.NumSetBits() != output3.NumSetBits() {

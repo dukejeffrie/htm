@@ -34,6 +34,9 @@ func TestConstruction(t *testing.T) {
 	one := NewBitset(2)
 	ExpectEquals(t, "one.length", 2, one.length)
 	ExpectEquals(t, "one.binary.length", 1, len(one.binary))
+	if !one.IsZero() {
+		t.Error("should be zero:", one)
+	}
 
 	cent := NewBitset(100)
 	ExpectEquals(t, "cent.length", 100, cent.length)
@@ -51,6 +54,9 @@ func TestSetAndReset(t *testing.T) {
 
 	b.Set(127)
 	ExpectEquals(t, "bit 127", true, b.IsSet(127))
+	if b.IsZero() {
+		t.Error("should not be zero:", b)
+	}
 
 	b.Set(11, 12)
 	ExpectEquals(t, "bit 127", true, b.IsSet(127))
@@ -58,6 +64,9 @@ func TestSetAndReset(t *testing.T) {
 
 	b.Reset()
 	ExpectEquals(t, "bit 127", false, b.IsSet(127))
+	if !b.IsZero() {
+		t.Error("should be zero:", b)
+	}
 
 	b.Set(222, 444, 888, 1023, 1024, 1331, 2047)
 	ExpectEquals(t, "num bits", 7, b.NumSetBits())
@@ -65,6 +74,16 @@ func TestSetAndReset(t *testing.T) {
 	ExpectEquals(t, "bit 111", true, b.IsSet(111))
 	b.Unset(111)
 	ExpectEquals(t, "bit 111", false, b.IsSet(111))
+}
+
+func TestSetAfterLength(t *testing.T) {
+	b := NewBitset(60)
+	b.Set(61, 62, 63)
+	ExpectEquals(t, "after-length bits not set", 0, b.NumSetBits())
+
+	b.SetRange(59, 70)
+	ExpectEquals(t, "overflowing range bits not set", 1, b.NumSetBits())
+	ExpectEquals(t, "bit 59", true, b.IsSet(59))
 }
 
 func TestSetRange(t *testing.T) {
@@ -303,4 +322,14 @@ func BenchmarkToIndexes100(b *testing.B) {
 
 func BenchmarkToIndexes1000(b *testing.B) {
 	ToIndexesBenchmarkTemplate(b, 2048, 1000)
+}
+
+func TestOverlapBitset(t *testing.T) {
+	alpha := NewBitset(2048)
+	alpha.Set(0, 2, 4, 10, 12, 14, 20, 22, 24)
+	beta := NewBitset(2048)
+	beta.Set(2, 12, 22, 32)
+	ExpectEquals(t, "alpha & beta", 3, alpha.Overlap(*beta))
+	beta.Set(4)
+	ExpectEquals(t, "alpha & beta", 4, alpha.Overlap(*beta))
 }

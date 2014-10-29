@@ -39,7 +39,6 @@ func (t *TopN) Pop() interface{} {
 
 type Scratch struct {
 	input   []int
-	overlap *Bitset
 	scores  TopN
 }
 
@@ -93,7 +92,6 @@ func (l *Region) ResetForInput(n, w int) {
 	if cap(l.scratch.input) < w {
 		l.scratch.input = make([]int, w)
 	}
-	l.scratch.overlap = NewBitset(n)
 	l.scratch.scores = l.scratch.scores[0:0]
 }
 
@@ -101,9 +99,7 @@ func (l *Region) ConsumeInput(input Bitset) {
 	l.scratch.scores = l.scratch.scores[0:0]
 	for i, c := range l.columns {
 		c.active.Reset()
-		l.scratch.overlap.CopyFrom(c.Connected())
-		l.scratch.overlap.And(input)
-		overlapScore := l.scratch.overlap.NumSetBits()
+		overlapScore := c.Connected().Overlap(input)
 		if overlapScore >= l.MinOverlap {
 			score := float32(overlapScore) + c.Boost()
 			heap.Push(&l.scratch.scores, ScoredElement{i, score})

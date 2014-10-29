@@ -58,11 +58,14 @@ func (c *Column) ResetConnections(numBits int, connected []int) {
 }
 
 func (c *Column) LearnFromInput(input Bitset, minOverlap int) {
-	c.proximal.Learn(input, c.Active().NumSetBits() > 0, minOverlap)
+	c.proximal.Learn(input, !c.Active().IsZero(), minOverlap)
 }
 
 func (c *Column) Activate() {
-	if c.predicted.NumSetBits() > 0 {
+	// This is the inference part of the temporal pooler, Phase 1: if any cell is
+	// predicted from the last step, we activate the predicted cells for this column.
+	// Otherwise we activate all cells.
+	if !c.predicted.IsZero() {
 		c.active.CopyFrom(*c.predicted)
 	} else {
 		// Bursting.
