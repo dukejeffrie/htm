@@ -3,7 +3,15 @@ package htm
 import "testing"
 
 func TestMinOverlap(t *testing.T) {
-	l := NewRegion("Single Region", 100, 4, 0.02)
+	l := NewRegion(RegionParameters{
+		Name:                 "Single Region",
+		Learning:             true,
+		Height:               4,
+		Width:                100,
+		InputLength:          2048,
+		MaximumFiringColumns: 40,
+		MinimumInputOverlap:  1,
+	})
 	columnRand.Seed(0)
 	l.ResetForInput(2048, 20)
 
@@ -18,7 +26,8 @@ func TestMinOverlap(t *testing.T) {
 	}
 	t.Log(output)
 
-	l.MinOverlap = 4
+	l.MinimumInputOverlap = 4
+
 	l.ConsumeInput(*input)
 	output = l.Output()
 	if !output.IsZero() {
@@ -28,7 +37,15 @@ func TestMinOverlap(t *testing.T) {
 
 func TestConsumeInput(t *testing.T) {
 	// 50 columns with 4 cells each, firing 2% of columns
-	l := NewRegion("Single Region", 50, 4, 0.02)
+	l := NewRegion(RegionParameters{
+		Name:                 "Single Region",
+		Learning:             true,
+		Height:               4,
+		Width:                50,
+		InputLength:          2048,
+		MaximumFiringColumns: 40,
+		MinimumInputOverlap:  1,
+	})
 
 	// 64-bit input, 2 bits of real data.
 	columnRand.Seed(1)
@@ -102,7 +119,15 @@ func TestConsumeInput(t *testing.T) {
 }
 
 func BenchmarkConsumeInput(b *testing.B) {
-	l := NewRegion("Single Region", 500, 4, 0.02)
+	l := NewRegion(RegionParameters{
+		Name:                 "Single Region",
+		Learning:             true,
+		Height:               4,
+		Width:                50,
+		InputLength:          2048,
+		MaximumFiringColumns: 40,
+		MinimumInputOverlap:  1,
+	})
 	l.Learning = false
 	l.ResetForInput(2048, 28)
 

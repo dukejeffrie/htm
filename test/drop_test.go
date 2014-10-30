@@ -41,13 +41,34 @@ func (d *Drop) Generate() {
 }
 
 func (d *Drop) InitializeNetwork() {
+	params := htm.RegionParameters{
+		Name:                 "0-drop",
+		Width:                2000,
+		Height:               9,
+		MaximumFiringColumns: 40,
+		MinimumInputOverlap:  0,
+		InputLength:          64,
+		Learning:             true,
+	}
 	d.step = 0
-	d.region0 = htm.NewRegion("0-drop", 2000, 9, 0.02)
-	d.region0.ResetForInput(64, 20)
-	d.region1 = htm.NewRegion("1-drop", 200, 8, 0.02)
-	d.region1.ResetForInput(d.region0.Output().Len(), 4)
-	d.region3 = htm.NewRegion("final", 64, 1, 0.1)
-	d.region3.ResetForInput(d.region1.Output().Len(), 5)
+	d.region0 = htm.NewRegion(params)
+	d.region0.ResetForInput(d.region0.InputLength, 20)
+
+	params.Name = "1-drop"
+	params.Width = 200
+	params.Height = 8
+	params.InputLength = d.region0.Output().Len()
+	params.MaximumFiringColumns = 4
+	d.region1 = htm.NewRegion(params)
+	d.region1.ResetForInput(d.region1.InputLength, 40)
+
+	params.Name = "final"
+	params.Width = 64
+	params.Height = 1
+	params.InputLength = d.region1.Output().Len()
+	params.MaximumFiringColumns = 2
+	d.region3 = htm.NewRegion(params)
+	d.region3.ResetForInput(d.region3.InputLength, 5)
 	d.patterns = make(map[string]string)
 }
 
@@ -113,10 +134,15 @@ func TestDrop(t *testing.T) {
 		Output:  out,
 		t:       t}
 	drop.InitializeNetwork()
+	fmt.Printf("%v\n%v\n%v\n",
+		drop.region0.RegionParameters,
+		drop.region1.RegionParameters,
+		drop.region3.RegionParameters)
+
 	go drop.Generate()
 	lastLearned := 0
 	numRecognized := 0
-	for numRecognized < 10 && drop.step-lastLearned < 1000 && drop.step < 1000000 {
+	for numRecognized < 10 && drop.step-lastLearned < 100 && drop.step < 1000000 {
 		recognized := drop.Step()
 		if recognized == 1 {
 			numRecognized++

@@ -3,7 +3,6 @@
 package htm
 
 import "fmt"
-import "math"
 import "container/heap"
 import "io"
 
@@ -42,43 +41,48 @@ type Scratch struct {
 	scores  TopN
 }
 
+type RegionParameters struct {
+	Name                 string
+	Learning             bool
+	Height               int
+	Width                int
+	InputLength          int
+	MaximumFiringColumns int
+	MinimumInputOverlap  int
+}
+
 type Region struct {
-	Name             string
-	Learning         bool
-	columns          []*Column
-	output           *Bitset
-	scratch          Scratch
-	maxFiringColumns int
-	MinOverlap       int
+	RegionParameters
+	columns    []*Column
+	output     *Bitset
+	learnState *Bitset
+	scratch    Scratch
 }
 
 // Creates a new named region with this many columns.
-func NewRegion(name string, width, height int, firingRatio float64) *Region {
-	maxFiringColumns := int(math.Ceil(float64(width)*firingRatio)) + 1
+func NewRegion(params RegionParameters) *Region {
 	result := &Region{
-		columns: make([]*Column, width),
-		output:  NewBitset(width * height),
-		Name:    name,
+		RegionParameters: params,
+		columns:          make([]*Column, params.Width),
+		output:           NewBitset(params.Width * params.Height),
+		learnState:       NewBitset(params.Width * params.Height),
 		scratch: Scratch{
-			input:  make([]int, 28),
-			scores: make([]ScoredElement, 0, maxFiringColumns),
+			input:      make([]int, 28),
+			scores:     make([]ScoredElement, 0, params.MaximumFiringColumns+1),
 		},
-		maxFiringColumns: maxFiringColumns,
-		MinOverlap:       1,
-		Learning:         true,
 	}
-	for i := 0; i < width; i++ {
-		result.columns[i] = NewColumn(height)
+	for i := 0; i < params.Width; i++ {
+		result.columns[i] = NewColumn(params.Height)
 	}
 	return result
 }
 
 func (l Region) Height() int {
-	return l.columns[0].Height()
+	return l.RegionParameters.Height
 }
 
 func (l Region) Width() int {
-	return len(l.columns)
+	return l.RegionParameters.Width
 }
 
 func (l *Region) ResetForInput(n, w int) {
@@ -95,15 +99,20 @@ func (l *Region) ResetForInput(n, w int) {
 	l.scratch.scores = l.scratch.scores[0:0]
 }
 
+func (l *Region) ResetColumnSynapses(i int, indices ...int) {
+	col := l.columns[i]
+	col.ResetConnections(l.InputLength, indices)
+}
+
 func (l *Region) ConsumeInput(input Bitset) {
 	l.scratch.scores = l.scratch.scores[0:0]
 	for i, c := range l.columns {
 		c.active.Reset()
 		overlapScore := c.Connected().Overlap(input)
-		if overlapScore >= l.MinOverlap {
+		if overlapScore >= l.MinimumInputOverlap {
 			score := float32(overlapScore) + c.Boost()
 			heap.Push(&l.scratch.scores, ScoredElement{i, score})
-			if l.scratch.scores.Len() > l.maxFiringColumns {
+			if l.scratch.scores.Len() > l.MaximumFiringColumns {
 				heap.Pop(&l.scratch.scores)
 			}
 		}
@@ -125,7 +134,7 @@ func (l *Region) Output() Bitset {
 
 func (l *Region) Learn(input Bitset) {
 	for _, col := range l.columns {
-		col.LearnFromInput(input, l.MinOverlap)
+		col.LearnFromInput(input, l.MinimumInputOverlap)
 	}
 }
 
