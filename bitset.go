@@ -163,7 +163,7 @@ func (b Bitset) Equals(other Bitset) bool {
 	return true
 }
 
-func (b *Bitset) CopyFrom(other Bitset) {
+func (b *Bitset) ResetTo(other Bitset) {
 	if b.length != other.length {
 		panic(fmt.Errorf(
 			"Cannot copy from bitset of different length (%d != %d)", b.length, other.length))
@@ -218,19 +218,6 @@ func (b *Bitset) appendAt(other Bitset, offset int) {
 	if l > b.length {
 		b.length = l
 	}
-}
-
-func (b *Bitset) Append(other Bitset) {
-	if b.length%64 == 0 {
-		// Easy case, aligned words.
-		b.binary = append(b.binary, other.binary...)
-		b.length += other.length
-		return
-	}
-
-	// Hard case, need to shift other left by b.length % 64 bits and pack
-	// it one word earlier.
-	b.appendAt(other, b.length)
 }
 
 func (b *Bitset) Truncate(width int) {

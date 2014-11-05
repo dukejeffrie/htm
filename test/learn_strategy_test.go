@@ -11,7 +11,7 @@ func TryToLearn(t *testing.T, maxTries int, ds *htm.DendriteSegment,
 	overlap := htm.NewBitset(inputs[0].Len())
 	for !ds.Connected().Equals(inputs[0]) {
 		input := inputs[result%len(inputs)]
-		overlap.CopyFrom(input)
+		overlap.ResetTo(input)
 		overlap.And(ds.Connected())
 		active := overlap.NumSetBits() >= minOverlap || rand.Float32()+ds.Boost > 3.0
 		ds.Learn(input, active, minOverlap)

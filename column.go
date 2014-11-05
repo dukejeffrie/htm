@@ -66,7 +66,7 @@ func (c *Column) Activate() {
 	// predicted from the last step, we activate the predicted cells for this column.
 	// Otherwise we activate all cells.
 	if !c.predicted.IsZero() {
-		c.active.CopyFrom(*c.predicted)
+		c.active.ResetTo(*c.predicted)
 	} else {
 		// Bursting.
 		c.active.SetRange(0, c.Height())

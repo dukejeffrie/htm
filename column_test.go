@@ -13,7 +13,7 @@ func BenchmarkOverlap(b *testing.B) {
 	result := NewBitset(64)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		result.CopyFrom(c.Connected())
+		result.ResetTo(c.Connected())
 		result.And(*input)
 	}
 }
