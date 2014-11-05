@@ -107,31 +107,47 @@ func TestIndexing(t *testing.T) {
 	ExpectEquals(t, "bit 3", true, b.IsSet(3))
 	ExpectEquals(t, "two bits set", 2, b.NumSetBits())
 
-	sl := make([]int, 10)
-	ExpectContentEquals(t, "indices 1 and 3", []int{1, 3}, b.ToIndexes(sl))
+	if !b.AllSet(1, 3) {
+		t.Errorf("Indices 1 and 3 should be set.")
+	}
+}
+
+func TestIteration(t *testing.T) {
+	b := NewBitset(2048).Set(1, 33, 63, 64, 2000)
+	dest := make([]int, b.NumSetBits())
+	d := 0
+	b.Foreach(func(i int) {
+		dest[d] = i
+		d++
+	})
+	other := NewBitset(2048).Set(dest...)
+	if !other.Equals(*b) {
+		t.Errorf("Iterator failed. Expected: %v, but got: %v", *b, *other)
+	}
 }
 
 func TestAppend(t *testing.T) {
-	scratch := make([]int, 20)
-
 	src := NewBitset(5)
 	src.Set(1)
 	src.Set(4)
 
 	dest := NewBitset(5)
-	dest.Append(*src)
+	dest.appendAt(*src, dest.Len())
 
 	ExpectEquals(t, "length", 10, dest.Len())
-	ExpectContentEquals(t, fmt.Sprintf("dest: %v", dest), []int{6, 9}, dest.ToIndexes(scratch))
+	if !dest.AllSet(6, 9) {
+		t.Errorf("dest should have 6 and 9: %v", *dest)
+	}
 
-	dest.Append(*src)
+	dest.appendAt(*src, dest.Len())
 
 	ExpectEquals(t, "length", 15, dest.Len())
-	ExpectContentEquals(t, fmt.Sprintf("dest: %v", dest), []int{6, 9, 11, 14}, dest.ToIndexes(scratch))
+	if !dest.AllSet(6, 9, 11, 14) {
+		t.Errorf("dest should have 6 and 9: %v", *dest)
+	}
 }
 
 func TestAppendLong(t *testing.T) {
-	scratch := make([]int, 20)
 	dest := NewBitset(20)
 	dest.Set(10)
 	src := NewBitset(60)
@@ -139,9 +155,11 @@ func TestAppendLong(t *testing.T) {
 	src.Set(22)
 	src.Set(59)
 
-	dest.Append(*src)
+	dest.appendAt(*src, dest.Len())
 	ExpectEquals(t, "length", 80, dest.Len())
-	ExpectContentEquals(t, fmt.Sprintf("dest: %v", dest), []int{10, 22, 42, 79}, dest.ToIndexes(scratch))
+	if !dest.AllSet(10, 22, 42, 79) {
+		t.Errorf("dest missing bits: %v", *dest)
+	}
 }
 
 func AppendBenchmarkTemplate(b *testing.B, srcSize, destSize int,
@@ -151,7 +169,7 @@ func AppendBenchmarkTemplate(b *testing.B, srcSize, destSize int,
 	b.ResetTimer()
 	dest := NewBitset(destSize)
 	for i := 0; i < b.N; i++ {
-		dest.Append(*src)
+		dest.appendAt(*src, dest.Len())
 		if truncate {
 			dest.Truncate(destSize)
 		} else {
@@ -194,7 +212,9 @@ func BenchmarkAppendOdd2048T(b *testing.B) {
 
 func SetFromBitsetAtBenchmarkTemplate(b *testing.B, srcSize int) {
 	src := NewBitset(srcSize)
-	src.Set(1, 3, 5)
+	for i := 0; i < srcSize/2; i++ {
+		src.Set(rand.Intn(srcSize))
+	}
 	b.ResetTimer()
 	dest := NewBitset(20480)
 	b.ResetTimer()
@@ -297,7 +317,7 @@ func BenchmarkSetRange1000(b *testing.B) {
 	SetRangeBenchmarkTemplate(b, 2048, 1000)
 }
 
-func ToIndexesBenchmarkTemplate(b *testing.B, n, l int) {
+func ForeachBenchmarkTemplate(b *testing.B, n, l int) {
 	rand.Seed(int64(1979))
 	bitset := NewBitset(n)
 	bits := make([]int, l)
@@ -306,22 +326,24 @@ func ToIndexesBenchmarkTemplate(b *testing.B, n, l int) {
 	}
 	bitset.Set(bits...)
 	b.ResetTimer()
-	output := make([]int, bitset.NumSetBits())
+	f := func(i int) {
+		// do nothing.
+	}
 	for i := 0; i < b.N; i++ {
-		bitset.ToIndexes(output)
+		bitset.Foreach(f)
 	}
 }
 
-func BenchmarkToIndexes10(b *testing.B) {
-	ToIndexesBenchmarkTemplate(b, 2048, 10)
+func BenchmarkForeach10(b *testing.B) {
+	ForeachBenchmarkTemplate(b, 2048, 10)
 }
 
-func BenchmarkToIndexes100(b *testing.B) {
-	ToIndexesBenchmarkTemplate(b, 2048, 100)
+func BenchmarkForeach100(b *testing.B) {
+	ForeachBenchmarkTemplate(b, 2048, 100)
 }
 
-func BenchmarkToIndexes1000(b *testing.B) {
-	ToIndexesBenchmarkTemplate(b, 2048, 1000)
+func BenchmarkForeach1000(b *testing.B) {
+	ForeachBenchmarkTemplate(b, 2048, 1000)
 }
 
 func TestOverlapBitset(t *testing.T) {

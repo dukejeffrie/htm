@@ -5,13 +5,12 @@ import "testing"
 func TestNewDendriteSegment(t *testing.T) {
 	connections := []int{1, 3, 5, 8, 13}
 	s := NewDendriteSegment(64, connections)
-	connected := s.Connected().ToIndexes(make([]int, len(connections)))
-	for i, v := range connections {
-		if connected[i] != v {
-			t.Errorf("Connection mismatch: %v != %v", v, connected[i])
+	for _, v := range connections {
+		if !s.Connected().IsSet(v) {
+			t.Errorf("Should be connected @%d: %v", v, s.Connected())
 		}
-		if s.permanence[v] != INITIAL_PERMANENCE {
-			t.Errorf("Initial permanence should have been set for connection %v", v)
+		if s.Get(v) != INITIAL_PERMANENCE {
+			t.Errorf("Initial permanence should have been set for connection %v (actual=%v)", v, s.Get(v))
 		}
 	}
 }

@@ -66,15 +66,15 @@ func (pm *PermanenceMap) Narrow(input Bitset) {
 	}
 }
 
-func (pm *PermanenceMap) Broaden(newPermanence float32, indices []int) (overlapCount int) {
-	for _, k := range indices {
+func (pm *PermanenceMap) Broaden(newPermanence float32, indices Bitset) (overlapCount int) {
+	indices.Foreach(func(k int) {
 		v := pm.permanence[k]
 		if v < newPermanence {
 			pm.Set(k, newPermanence)
 		} else if v >= CONNECTION_THRESHOLD {
 			overlapCount++
 		}
-	}
+	})
 	return
 }
 
@@ -158,7 +158,7 @@ func (ds *DendriteSegment) broaden(input Bitset, minOverlap int) {
 	if newPermanence > CONNECTION_THRESHOLD {
 		newPermanence = CONNECTION_THRESHOLD
 	}
-	overlapCount := ds.PermanenceMap.Broaden(newPermanence, input.ToIndexes(make([]int, input.NumSetBits())))
+	overlapCount := ds.PermanenceMap.Broaden(newPermanence, input)
 	ds.overlapHistory.Record(overlapCount >= minOverlap)
 	if avg, ok := ds.overlapHistory.Average(); ok && avg < ds.MinActivityRatio {
 		for k, v := range ds.permanence {

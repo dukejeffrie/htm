@@ -9,6 +9,17 @@ import "bufio"
 import "io"
 import "strings"
 
+const deBrujin64 = 0x0218a392cd3d5dbf
+
+var deBrujin64Table [64]int
+
+func init() {
+	for index := 0; index < 64; index++ {
+		n := uint64(1) << uint(index)
+		deBrujin64Table[((n&-n)*deBrujin64)>>58] = index
+	}
+}
+
 // A bitset type.
 type Bitset struct {
 	// The binary representation of this bitset. Bits are stored LittleEndian but integers grow in orders of magnitude into 64-bit integers instead of bytes.
@@ -18,24 +29,31 @@ type Bitset struct {
 }
 
 func (b Bitset) IsSet(index int) bool {
+	if index < 0 || index > b.length {
+		return false
+	}
 	pos, offset := index/64, index%64
 	return b.binary[pos]&(1<<uint64(offset)) != 0
 }
 
-func (b Bitset) ToIndexes(indices []int) []int {
-	dest := 0
+func (b Bitset) AllSet(indices ...int) bool {
+	for _, v := range indices {
+		if v > b.length || !b.IsSet(v) {
+			return false
+		}
+	}
+	return true
+}
+
+func (b Bitset) Foreach(f func(int)) {
 	base := 0
 	for pos, el := range b.binary {
 		base = pos * 64
-		for i := 0; el > 0; i++ {
-			if el&1 == 1 {
-				indices[dest] = base + i
-				dest++
-			}
-			el >>= 1
+		for el > 0 {
+			f(base + deBrujin64Table[((el&-el)*deBrujin64)>>58])
+			el &= el - 1
 		}
 	}
-	return indices[0:dest]
 }
 
 func (b Bitset) Overlap(other Bitset) int {
@@ -48,10 +66,6 @@ func (b Bitset) Overlap(other Bitset) int {
 		}
 	}
 	return count
-}
-
-func (b Bitset) GetUint(index int) uint64 {
-	return b.binary[index]
 }
 
 func (b Bitset) NumSetBits() int {
@@ -75,18 +89,20 @@ func (b Bitset) IsZero() bool {
 	return true
 }
 
-func (b *Bitset) Reset() {
+func (b *Bitset) Reset() *Bitset {
 	for i := 0; i < len(b.binary); i++ {
 		b.binary[i] = uint64(0)
 	}
+	return b
 }
 
-func (b *Bitset) Set(indices ...int) {
+func (b *Bitset) Set(indices ...int) *Bitset {
 	for _, v := range indices {
 		if v >= 0 && v < b.length {
 			b.binary[v/64] |= 1 << uint64(v%64)
 		}
 	}
+	return b
 }
 
 // Sets all bits in the interval [start, end).
@@ -124,12 +140,10 @@ func (b *Bitset) Unset(indices ...int) {
 }
 
 func (b Bitset) String() string {
-	indices := make([]int, b.NumSetBits())
-	indices = b.ToIndexes(indices)
-	s := make([]string, len(indices))
-	for i, v := range indices {
-		s[i] = fmt.Sprintf("%04d", v)
-	}
+	s := make([]string, 0, b.NumSetBits())
+	b.Foreach(func(i int) {
+		s = append(s, fmt.Sprintf("%04d", i))
+	})
 	return "[" + strings.Join(s, ",") + "]"
 }
 
@@ -138,7 +152,7 @@ func (b Bitset) Len() int {
 }
 
 func (b Bitset) Equals(other Bitset) bool {
-	if b.Len() != other.Len() {
+	if b.length != other.length {
 		return false
 	}
 	for i, v := range b.binary {
@@ -150,17 +164,17 @@ func (b Bitset) Equals(other Bitset) bool {
 }
 
 func (b *Bitset) CopyFrom(other Bitset) {
-	if b.Len() != other.Len() {
+	if b.length != other.length {
 		panic(fmt.Errorf(
-			"Cannot copy from bitset of different length (%d != %d)", b.Len(), other.Len()))
+			"Cannot copy from bitset of different length (%d != %d)", b.length, other.length))
 	}
 	copy(b.binary, other.binary)
 }
 
 func (b *Bitset) Or(other Bitset) {
-	if b.Len() != other.Len() {
+	if b.length != other.length {
 		panic(fmt.Errorf(
-			"Cannot AND bitsets of different length (%d != %d)", b.Len(), other.Len()))
+			"Cannot AND bitsets of different length (%d != %d)", b.length, other.length))
 	}
 	for i, v := range other.binary {
 		b.binary[i] |= v
@@ -168,9 +182,9 @@ func (b *Bitset) Or(other Bitset) {
 }
 
 func (b *Bitset) And(other Bitset) {
-	if b.Len() != other.Len() {
+	if b.length != other.length {
 		panic(fmt.Errorf(
-			"Cannot AND bitsets of different length (%d != %d)", b.Len(), other.Len()))
+			"Cannot AND bitsets of different length (%d != %d)", b.length, other.length))
 	}
 	for i, v := range other.binary {
 		b.binary[i] &= v
@@ -178,9 +192,9 @@ func (b *Bitset) And(other Bitset) {
 }
 
 func (b *Bitset) SetFromBitsetAt(other Bitset, offset int) {
-	if offset+other.Len() > b.Len() {
+	if offset+other.length > b.length {
 		panic(fmt.Errorf("AND operation would go past end! Needs %d bytes, has %d.",
-			offset+other.Len(), b.Len()))
+			offset+other.length, b.length))
 	}
 	b.appendAt(other, offset)
 }

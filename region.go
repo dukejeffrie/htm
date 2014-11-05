@@ -37,8 +37,8 @@ func (t *TopN) Pop() interface{} {
 }
 
 type Scratch struct {
-	input   []int
-	scores  TopN
+	input  []int
+	scores TopN
 }
 
 type RegionParameters struct {
@@ -67,8 +67,8 @@ func NewRegion(params RegionParameters) *Region {
 		output:           NewBitset(params.Width * params.Height),
 		learnState:       NewBitset(params.Width * params.Height),
 		scratch: Scratch{
-			input:      make([]int, 28),
-			scores:     make([]ScoredElement, 0, params.MaximumFiringColumns+1),
+			input:  make([]int, 28),
+			scores: make([]ScoredElement, 0, params.MaximumFiringColumns+1),
 		},
 	}
 	for i := 0; i < params.Width; i++ {
