@@ -4,7 +4,8 @@ import "testing"
 
 func TestNewDendriteSegment(t *testing.T) {
 	connections := []int{1, 3, 5, 8, 13}
-	s := NewDendriteSegment(64, connections)
+	s := NewDendriteSegment(64)
+	s.Reset(connections...)
 	for _, v := range connections {
 		if !s.Connected().IsSet(v) {
 			t.Errorf("Should be connected @%d: %v", v, s.Connected())
@@ -15,12 +16,34 @@ func TestNewDendriteSegment(t *testing.T) {
 	}
 }
 
+func TestPermanence(t *testing.T) {
+	m := NewPermanenceMap(64)
+	m.Reset(1, 10, 20, 30, 40, 50, 60)
+	m.Set(10, PERMANENCE_MIN)
+	if m.Connected().IsSet(10) {
+		t.Errorf("Should have disconnected bit 10: %v", *m)
+	}
+	m.Set(8, CONNECTION_THRESHOLD)
+	if !m.Connected().IsSet(8) {
+		t.Errorf("Should have connected bit 8: %v", *m)
+	}
+	input := NewBitset(64).Set(1, 10, 20, 21, 22, 23)
+	if m.Overlap(*input, false) != 2 {
+		t.Errorf("Bad strong overlap with input=%v: %v", *input, *m)
+	}
+	if m.Overlap(*input, true) != 3 {
+		t.Errorf("Bad weak overlap with input=%v: %v", *input, *m)
+	}
+}
+
 func TestNarrowSynapses(t *testing.T) {
 	connections := []int{1, 3, 5, 8, 13}
-	ds := NewDendriteSegment(64, connections)
+	ds := NewPermanenceMap(64)
+	ds.Reset(connections...)
 	input := NewBitset(64)
 	input.Set(1, 5, 22)
-	ds.Narrow(*input)
+	ds.narrow(*input)
+	ds.narrow(*input)
 	t.Log(ds.permanence)
 	if ds.permanence[1] == ds.permanence[3] {
 		t.Errorf("Permanence scores did not improve: %v", ds.permanence)
@@ -37,20 +60,22 @@ func TestNarrowSynapses(t *testing.T) {
 }
 
 func BenchmarkNarrowSynapses(b *testing.B) {
-	ds := NewDendriteSegment(64, []int{1, 3, 5, 8, 13})
+	ds := NewPermanenceMap(64)
+	ds.Reset(1, 3, 5, 8, 13)
 	input := NewBitset(64)
 	input.Set(1, 5, 22)
 	for i := 0; i < b.N; i++ {
-		ds.Narrow(*input)
+		ds.narrow(*input)
 	}
 }
 
 func TestBroadenSynapses(t *testing.T) {
-	ds := NewDendriteSegment(64, []int{1, 3, 5, 8, 13})
+	ds := NewDendriteSegment(64)
+	ds.Reset(1, 3, 5, 8, 13)
 	input := NewBitset(64)
 	input.Set(1, 5, 22)
 	for i := 0; i < 1000 && ds.permanence[3] >= PERMANENCE_MIN; i++ {
-		ds.Narrow(*input)
+		ds.narrow(*input)
 		t.Log(ds)
 	}
 	if ds.permanence[22] != 0 {
@@ -72,7 +97,8 @@ func TestBroadenSynapses(t *testing.T) {
 }
 
 func BenchmarkBroadenSynapses(b *testing.B) {
-	ds := NewDendriteSegment(64, []int{1, 3, 5, 8, 13})
+	ds := NewDendriteSegment(64)
+	ds.Reset(1, 3, 5, 8, 13)
 	input := NewBitset(64)
 	input.Set(1, 5, 22)
 	for i := 0; i < b.N; i++ {
@@ -81,11 +107,12 @@ func BenchmarkBroadenSynapses(b *testing.B) {
 }
 
 func TestTrim(t *testing.T) {
-	ds := NewDendriteSegment(64, []int{1, 3, 5, 8, 13})
+	ds := NewDendriteSegment(64)
+	ds.Reset(1, 3, 5, 8, 13)
 	input := NewBitset(64)
 	input.Set(1, 5, 22)
 	for i := 0; i < 10 && ds.permanence[5] >= CONNECTION_THRESHOLD; i++ {
-		ds.Narrow(*input)
+		ds.narrow(*input)
 	}
 	if len(ds.permanence) > 2 {
 		t.Errorf("Should have trimmed synaptic inputs: %v", ds)

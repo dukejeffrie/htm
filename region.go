@@ -41,14 +41,23 @@ type Scratch struct {
 	scores TopN
 }
 
+// Parameters to describe a region.
 type RegionParameters struct {
-	Name                 string
-	Learning             bool
-	Height               int
-	Width                int
-	InputLength          int
+	// The name of the region, used for debugging.
+	Name string
+	// Whether learning is on or off.
+	Learning bool
+	// Number of cells in each column.
+	Height int
+	// Number of columns in this region.
+	Width int
+	// Size of the input, in bits.
+	InputLength int
+	// Maximum number of columns that can fire.
 	MaximumFiringColumns int
-	MinimumInputOverlap  int
+	// Minimum overlap between an input and a column's proximal dentrite to trigger
+	// activation.
+	MinimumInputOverlap int
 }
 
 type Region struct {
@@ -59,7 +68,7 @@ type Region struct {
 	scratch    Scratch
 }
 
-// Creates a new named region with this many columns.
+// Creates a new named region with the given parameters.
 func NewRegion(params RegionParameters) *Region {
 	result := &Region{
 		RegionParameters: params,
@@ -67,12 +76,12 @@ func NewRegion(params RegionParameters) *Region {
 		output:           NewBitset(params.Width * params.Height),
 		learnState:       NewBitset(params.Width * params.Height),
 		scratch: Scratch{
-			input:  make([]int, 28),
+			input:  make([]int, params.InputLength),
 			scores: make([]ScoredElement, 0, params.MaximumFiringColumns+1),
 		},
 	}
 	for i := 0; i < params.Width; i++ {
-		result.columns[i] = NewColumn(params.Height)
+		result.columns[i] = NewColumn(params.InputLength, params.Height)
 	}
 	return result
 }
@@ -85,23 +94,21 @@ func (l Region) Width() int {
 	return l.RegionParameters.Width
 }
 
-func (l *Region) ResetForInput(n, w int) {
+func (l *Region) RandomizeColumns(w int) {
 	perm := make([]int, w)
 	for _, col := range l.columns {
 		for i := 0; i < w; i++ {
-			perm[i] = columnRand.Intn(n)
+			perm[i] = columnRand.Intn(l.InputLength)
 		}
-		col.ResetConnections(n, perm)
+		col.ResetConnections(perm)
+		col.SetBoost(columnRand.Float32() * 0.00001)
 	}
-	if cap(l.scratch.input) < w {
-		l.scratch.input = make([]int, w)
-	}
-	l.scratch.scores = l.scratch.scores[0:0]
 }
 
 func (l *Region) ResetColumnSynapses(i int, indices ...int) {
 	col := l.columns[i]
-	col.ResetConnections(l.InputLength, indices)
+	col.ResetConnections(indices)
+	col.SetBoost(columnRand.Float32() * 0.00001)
 }
 
 func (l *Region) ConsumeInput(input Bitset) {

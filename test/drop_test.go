@@ -5,22 +5,25 @@ package test
 import "github.com/dukejeffrie/htm"
 
 import "fmt"
+import "math/rand"
 import "io"
 import "os"
 import "testing"
 
 type Drop struct {
-	Running  bool
-	Input    htm.InputSource
-	Output   io.Writer
-	rawInput []*htm.RawInput
-	region0  *htm.Region
-	region1  *htm.Region
-	region2  *htm.Region
-	region3  *htm.Region
-	step     int
-	t        *testing.T
-	patterns map[string]string
+	Running         bool
+	Input           htm.InputSource
+	Output          io.Writer
+	rawInput        []*htm.RawInput
+	region0         *htm.Region
+	region1         *htm.Region
+	region2         *htm.Region
+	region3         *htm.Region
+	predicted       *htm.Bitset
+	step            int
+	t               *testing.T
+	patterns        map[string]string
+	LearnQuietUntil int
 }
 
 func (d *Drop) Generate() {
@@ -42,33 +45,34 @@ func (d *Drop) Generate() {
 
 func (d *Drop) InitializeNetwork() {
 	params := htm.RegionParameters{
-		Name:                 "0-drop",
-		Width:                2000,
-		Height:               9,
-		MaximumFiringColumns: 40,
-		MinimumInputOverlap:  0,
-		InputLength:          64,
-		Learning:             true,
+		Name:                "0-drop",
+		Width:               640,
+		Height:              8,
+		MinimumInputOverlap: 1,
+		InputLength:         64,
+		Learning:            true,
 	}
+	params.MaximumFiringColumns = params.Width / 50
 	d.step = 0
+	d.predicted = htm.NewBitset(params.InputLength)
 	d.region0 = htm.NewRegion(params)
-	d.region0.ResetForInput(d.region0.InputLength, 20)
+	d.region0.RandomizeColumns(params.InputLength / 2)
 
 	params.Name = "1-drop"
-	params.Width = 200
-	params.Height = 8
+	params.Width = 2000
+	params.Height = 5
 	params.InputLength = d.region0.Output().Len()
-	params.MaximumFiringColumns = 4
+	params.MaximumFiringColumns = params.Width / 100
 	d.region1 = htm.NewRegion(params)
-	d.region1.ResetForInput(d.region1.InputLength, 40)
+	d.region1.RandomizeColumns(params.InputLength / 2)
 
 	params.Name = "final"
-	params.Width = 64
-	params.Height = 1
+	params.Width = 200
+	params.Height = 3
 	params.InputLength = d.region1.Output().Len()
-	params.MaximumFiringColumns = 2
+	params.MaximumFiringColumns = 1
 	d.region3 = htm.NewRegion(params)
-	d.region3.ResetForInput(d.region3.InputLength, 5)
+	d.region3.RandomizeColumns(params.InputLength / 2)
 	d.patterns = make(map[string]string)
 }
 
@@ -78,6 +82,15 @@ func (d *Drop) SetLearning(learning bool) {
 	//d.region2.Learning = false
 	d.region3.Learning = false
 	fmt.Fprintf(d.Output, "\nLearning = %t\n", learning)
+}
+
+func (d *Drop) AddNoise() {
+	noise := htm.NewBitset(d.region0.InputLength)
+	noise.Set(rand.Intn(noise.Len()), rand.Intn(noise.Len()))
+
+	d.region0.ConsumeInput(*noise)
+	d.region1.ConsumeInput(d.region0.Output())
+	d.region3.ConsumeInput(d.region1.Output())
 }
 
 func (d *Drop) Step() (recognized int) {
@@ -142,7 +155,8 @@ func TestDrop(t *testing.T) {
 	go drop.Generate()
 	lastLearned := 0
 	numRecognized := 0
-	for numRecognized < 10 && drop.step-lastLearned < 100 && drop.step < 1000000 {
+	drop.LearnQuietUntil = 100
+	for numRecognized < 20 && drop.step-lastLearned < 1000 && drop.step < 1000000 {
 		recognized := drop.Step()
 		if recognized == 1 {
 			numRecognized++
@@ -161,8 +175,12 @@ func TestDrop(t *testing.T) {
 	drop.SetLearning(false)
 	fmt.Printf("\nLearning = %t\n", false)
 
+	numTested := 50
+	for i := 0; i < numTested/3; i++ {
+		drop.AddNoise()
+	}
 	numRecognized = 0
-	for i := 0; i < 10; i++ {
+	for i := 0; i < numTested; i++ {
 		recognized := drop.Step()
 		if recognized == 1 {
 			numRecognized++
@@ -174,6 +192,6 @@ func TestDrop(t *testing.T) {
 		}
 	}
 
-	fmt.Printf("\nDone after %d steps, recognizing %d patterns.\n", lastStep, numRecognized)
-	fmt.Fprintf(drop.Output, "\nDone after %d steps, recognizing %d patterns.\n", lastStep, numRecognized)
+	fmt.Printf("\nDone after %d steps, predicting %d/%d steps.\n", lastStep, numRecognized, numTested)
+	fmt.Fprintf(drop.Output, "\nDone after %d steps, predicting %d/%d patterns.\n", lastStep, numRecognized, numTested)
 }

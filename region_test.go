@@ -13,7 +13,7 @@ func TestMinOverlap(t *testing.T) {
 		MinimumInputOverlap:  1,
 	})
 	columnRand.Seed(0)
-	l.ResetForInput(2048, 20)
+	l.RandomizeColumns(20)
 
 	input := NewBitset(2048)
 	input.SetRange(0, 20)
@@ -42,14 +42,14 @@ func TestConsumeInput(t *testing.T) {
 		Learning:             true,
 		Height:               4,
 		Width:                50,
-		InputLength:          2048,
+		InputLength:          64,
 		MaximumFiringColumns: 40,
 		MinimumInputOverlap:  1,
 	})
 
 	// 64-bit input, 2 bits of real data.
 	columnRand.Seed(1)
-	l.ResetForInput(64, 2)
+	l.RandomizeColumns(2)
 
 	input := NewBitset(64)
 	input.SetRange(0, 1)
@@ -129,7 +129,7 @@ func BenchmarkConsumeInput(b *testing.B) {
 		MinimumInputOverlap:  1,
 	})
 	l.Learning = false
-	l.ResetForInput(2048, 28)
+	l.RandomizeColumns(28)
 
 	input := NewBitset(2048)
 	input.Set(columnRand.Perm(2048)[0:28]...)

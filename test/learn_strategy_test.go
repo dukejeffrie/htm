@@ -15,7 +15,6 @@ func TryToLearn(t *testing.T, maxTries int, ds *htm.DendriteSegment,
 		overlap.And(ds.Connected())
 		active := overlap.NumSetBits() >= minOverlap || rand.Float32()+ds.Boost > 3.0
 		ds.Learn(input, active, minOverlap)
-		t.Log("round:", result, ds)
 		result++
 		if active {
 			fmt.Print("N")
@@ -23,8 +22,7 @@ func TryToLearn(t *testing.T, maxTries int, ds *htm.DendriteSegment,
 			fmt.Print("B")
 		}
 		if result > maxTries {
-			t.Log(fmt.Sprintf("Failed after %d rounds.", maxTries))
-			t.Fail()
+			t.Error(fmt.Sprintf("Failed after %d rounds.", maxTries))
 			return result
 		}
 	}
@@ -34,7 +32,8 @@ func TryToLearn(t *testing.T, maxTries int, ds *htm.DendriteSegment,
 
 func TestLearn64PatternA_5(t *testing.T) {
 	rand.Seed(1979)
-	ds := htm.NewDendriteSegment(64, []int{1, 3, 5, 8, 13, 21})
+	ds := htm.NewDendriteSegment(64)
+	ds.Reset(1, 3, 5, 8, 13, 21)
 	patternA := htm.NewBitset(64)
 	patternA.Set(2, 4, 22, 24, 42, 44, 62)
 	TryToLearn(t, 80, ds, 5, *patternA)
@@ -43,7 +42,8 @@ func TestLearn64PatternA_5(t *testing.T) {
 
 func TestLearn64PatternAB_5(t *testing.T) {
 	rand.Seed(1979)
-	ds := htm.NewDendriteSegment(64, []int{1, 3, 5, 8, 13, 21})
+	ds := htm.NewDendriteSegment(64)
+	ds.Reset(1, 3, 5, 8, 13, 21)
 	patternA := htm.NewBitset(64)
 	patternA.Set(2, 4, 22, 24, 42, 44, 62)
 	patternB := htm.NewBitset(64)
@@ -54,7 +54,8 @@ func TestLearn64PatternAB_5(t *testing.T) {
 
 func TestLearn64PatternABC_5(t *testing.T) {
 	rand.Seed(1979)
-	ds := htm.NewDendriteSegment(64, []int{1, 3, 5, 8, 13, 21})
+	ds := htm.NewDendriteSegment(64)
+	ds.Reset(1, 3, 5, 8, 13, 21)
 	patternA := htm.NewBitset(64)
 	patternA.Set(2, 4, 22, 24, 42, 44, 62)
 	patternB := htm.NewBitset(64)

@@ -4,23 +4,21 @@ import "fmt"
 import "io"
 import "testing"
 
-func BenchmarkOverlap(b *testing.B) {
-	c := NewColumn(1)
+func BenchmarkColumnOverlap(b *testing.B) {
+	c := NewColumn(64, 1)
 	connections := []int{1, 3, 5, 8, 11}
-	c.ResetConnections(64, connections)
-	input := NewBitset(64)
-	input.Set(1, 5, 22)
-	result := NewBitset(64)
+	c.ResetConnections(connections)
+	input := NewBitset(64).Set(1, 5, 22)
+	result := NewBitset(64).Set(1, 5, 22, 60)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		result.ResetTo(c.Connected())
-		result.And(*input)
+		result.Overlap(*input)
 	}
 }
 
 func TestPrintColumn(t *testing.T) {
-	col := NewColumn(5)
-	col.ResetConnections(64, []int{1, 10, 11, 20})
+	col := NewColumn(64, 5)
+	col.ResetConnections([]int{1, 10, 11, 20})
 	col.predicted.Set(3, 4)
 	col.active.Set(1, 3)
 	reader, writer := io.Pipe()

@@ -17,16 +17,27 @@ type PermanenceMap struct {
 	synapses   *Bitset
 }
 
-func NewPermanenceMap(numBits int, connected []int) *PermanenceMap {
+func NewPermanenceMap(numBits int) *PermanenceMap {
 	result := &PermanenceMap{
-		permanence: make(map[int]float32, len(connected)),
+		permanence: make(map[int]float32),
 		synapses:   NewBitset(numBits),
 	}
-	for _, v := range connected {
-		result.permanence[v] = INITIAL_PERMANENCE
-	}
-	result.synapses.Set(connected...)
 	return result
+}
+
+func (pm *PermanenceMap) Reset(connected ...int) {
+	if len(pm.permanence) > 0 {
+		pm.permanence = make(map[int]float32)
+		pm.synapses.Reset()
+	}
+	for _, v := range connected {
+		pm.permanence[v] = INITIAL_PERMANENCE
+	}
+	pm.synapses.Set(connected...)
+}
+
+func (pm PermanenceMap) Len() int {
+	return pm.synapses.Len()
 }
 
 func (pm *PermanenceMap) Get(k int) (v float32) {
@@ -40,22 +51,46 @@ func (pm *PermanenceMap) Set(k int, v float32) {
 	} else if v < 0.0 {
 		v = 0.0
 	}
+	if v < PERMANENCE_MIN {
+		pm.synapses.Unset(k)
+		delete(pm.permanence, k)
+		return
+	}
 	pm.permanence[k] = v
 	if v >= CONNECTION_THRESHOLD {
 		pm.synapses.Set(k)
 	} else {
 		pm.synapses.Unset(k)
-		if v < PERMANENCE_MIN {
-			delete(pm.permanence, k)
-		}
 	}
+}
+
+func (pm PermanenceMap) String() string {
+	return fmt.Sprintf("(%d connected, %+v)", pm.synapses.NumSetBits(), pm.permanence)
 }
 
 func (pm PermanenceMap) Connected() Bitset {
 	return *pm.synapses
 }
 
-func (pm *PermanenceMap) Narrow(input Bitset) {
+func (pm PermanenceMap) Overlap(input Bitset, weak bool) int {
+	if weak {
+		max := input.NumSetBits()
+		count := 0
+		for k, _ := range pm.permanence {
+			if input.IsSet(k) {
+				count++
+				if count >= max {
+					break
+				}
+			}
+		}
+		return count
+	} else {
+		return pm.synapses.Overlap(input)
+	}
+}
+
+func (pm *PermanenceMap) narrow(input Bitset) {
 	for k, v := range pm.permanence {
 		if input.IsSet(k) {
 			v += PERMANENCE_INC
@@ -64,18 +99,6 @@ func (pm *PermanenceMap) Narrow(input Bitset) {
 		}
 		pm.Set(k, v)
 	}
-}
-
-func (pm *PermanenceMap) Broaden(newPermanence float32, indices Bitset) (overlapCount int) {
-	indices.Foreach(func(k int) {
-		v := pm.permanence[k]
-		if v < newPermanence {
-			pm.Set(k, newPermanence)
-		} else if v >= CONNECTION_THRESHOLD {
-			overlapCount++
-		}
-	})
-	return
 }
 
 type CycleHistory struct {
@@ -129,9 +152,9 @@ func (ds DendriteSegment) String() string {
 		ac, ov, ds.Boost, ds.permanence, ds.synapses)
 }
 
-func NewDendriteSegment(numBits int, connected []int) *DendriteSegment {
+func NewDendriteSegment(numBits int) *DendriteSegment {
 	ds := &DendriteSegment{
-		PermanenceMap:     NewPermanenceMap(numBits, connected),
+		PermanenceMap:     NewPermanenceMap(numBits),
 		MinActivityRatio:  0.02,
 		Boost:             0,
 		overlapHistory:    NewCycleHistory(100),
@@ -143,7 +166,7 @@ func NewDendriteSegment(numBits int, connected []int) *DendriteSegment {
 func (ds *DendriteSegment) Learn(input Bitset, active bool, minOverlap int) {
 	ds.activationHistory.Record(active)
 	if active {
-		ds.Narrow(input)
+		ds.narrow(input)
 		ds.Boost = 0.0
 	} else {
 		ds.broaden(input, minOverlap)
@@ -158,7 +181,15 @@ func (ds *DendriteSegment) broaden(input Bitset, minOverlap int) {
 	if newPermanence > CONNECTION_THRESHOLD {
 		newPermanence = CONNECTION_THRESHOLD
 	}
-	overlapCount := ds.PermanenceMap.Broaden(newPermanence, input)
+	overlapCount := 0
+	input.Foreach(func(k int) {
+		v := ds.Get(k)
+		if v < newPermanence {
+			ds.Set(k, newPermanence)
+		} else if v >= CONNECTION_THRESHOLD {
+			overlapCount++
+		}
+	})
 	ds.overlapHistory.Record(overlapCount >= minOverlap)
 	if avg, ok := ds.overlapHistory.Average(); ok && avg < ds.MinActivityRatio {
 		for k, v := range ds.permanence {

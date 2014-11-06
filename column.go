@@ -21,10 +21,12 @@ type Column struct {
 	proximal *DendriteSegment
 }
 
-func NewColumn(height int) *Column {
-	result := new(Column)
-	result.active = NewBitset(height)
-	result.predicted = NewBitset(height)
+func NewColumn(inputSize, height int) *Column {
+	result := &Column{
+		active:         NewBitset(height),
+		predicted:      NewBitset(height),
+		proximal:       NewDendriteSegment(inputSize),
+	}
 	return result
 }
 
@@ -39,7 +41,6 @@ func (c Column) String() string {
 		c.Connected())
 }
 
-// Gets the indices of the connected synapses. The result is in ascending order.
 func (c Column) Connected() Bitset {
 	return c.proximal.Connected()
 }
@@ -52,9 +53,12 @@ func (c Column) Boost() float32 {
 	return c.proximal.Boost
 }
 
-func (c *Column) ResetConnections(numBits int, connected []int) {
-	c.proximal = NewDendriteSegment(numBits, connected)
-	c.proximal.Boost = columnRand.Float32() * 0.00001
+func (c *Column) SetBoost(boost float32) {
+	c.proximal.Boost = boost
+}
+
+func (c *Column) ResetConnections(connected []int) {
+	c.proximal.Reset(connected...)
 }
 
 func (c *Column) LearnFromInput(input Bitset, minOverlap int) {
