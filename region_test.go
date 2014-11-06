@@ -152,14 +152,14 @@ func TestConsumeInput(t *testing.T) {
 	t.Log(output3)
 }
 
-func BenchmarkConsumeInput(b *testing.B) {
+func BenchmarkConsumeInput500(b *testing.B) {
 	l := NewRegion(RegionParameters{
 		Name:                 "Single Region",
 		Learning:             true,
-		Height:               4,
-		Width:                50,
+		Height:               32,
+		Width:                500,
 		InputLength:          2048,
-		MaximumFiringColumns: 40,
+		MaximumFiringColumns: 10,
 		MinimumInputOverlap:  1,
 	})
 	l.Learning = false
@@ -171,5 +171,27 @@ func BenchmarkConsumeInput(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		l.ConsumeInput(*input)
+	}
+}
+
+func BenchmarkLearnRegion(b *testing.B) {
+	l := NewRegion(RegionParameters{
+		Name:                 "Single Region",
+		Learning:             true,
+		Height:               32,
+		Width:                500,
+		InputLength:          2048,
+		MaximumFiringColumns: 10,
+		MinimumInputOverlap:  1,
+	})
+	l.Learning = false
+	l.RandomizeColumns(28)
+
+	input := data.NewBitset(2048)
+	input.Set(columnRand.Perm(2048)[0:28]...)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		l.Learn(*input)
 	}
 }
