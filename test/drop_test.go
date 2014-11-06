@@ -3,6 +3,7 @@
 package test
 
 import "github.com/dukejeffrie/htm"
+import "github.com/dukejeffrie/htm/data"
 
 import "fmt"
 import "math/rand"
@@ -19,7 +20,7 @@ type Drop struct {
 	region1         *htm.Region
 	region2         *htm.Region
 	region3         *htm.Region
-	predicted       *htm.Bitset
+	predicted       *data.Bitset
 	step            int
 	t               *testing.T
 	patterns        map[string]string
@@ -54,7 +55,7 @@ func (d *Drop) InitializeNetwork() {
 	}
 	params.MaximumFiringColumns = params.Width / 50
 	d.step = 0
-	d.predicted = htm.NewBitset(params.InputLength)
+	d.predicted = data.NewBitset(params.InputLength)
 	d.region0 = htm.NewRegion(params)
 	d.region0.RandomizeColumns(params.InputLength / 2)
 
@@ -85,7 +86,7 @@ func (d *Drop) SetLearning(learning bool) {
 }
 
 func (d *Drop) AddNoise() {
-	noise := htm.NewBitset(d.region0.InputLength)
+	noise := data.NewBitset(d.region0.InputLength)
 	noise.Set(rand.Intn(noise.Len()), rand.Intn(noise.Len()))
 
 	d.region0.ConsumeInput(*noise)

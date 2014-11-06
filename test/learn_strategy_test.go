@@ -4,11 +4,12 @@ import "fmt"
 import "testing"
 import "math/rand"
 import "github.com/dukejeffrie/htm"
+import "github.com/dukejeffrie/htm/data"
 
 func TryToLearn(t *testing.T, maxTries int, ds *htm.DendriteSegment,
-	minOverlap int, inputs ...htm.Bitset) int {
+	minOverlap int, inputs ...data.Bitset) int {
 	result := 0
-	overlap := htm.NewBitset(inputs[0].Len())
+	overlap := data.NewBitset(inputs[0].Len())
 	for !ds.Connected().Equals(inputs[0]) {
 		input := inputs[result%len(inputs)]
 		overlap.ResetTo(input)
@@ -35,7 +36,7 @@ func TestLearn64PatternA_5(t *testing.T) {
 	rand.Seed(1979)
 	ds := htm.NewDendriteSegment(64)
 	ds.Reset(1, 3, 5, 8, 13, 21)
-	patternA := htm.NewBitset(64)
+	patternA := data.NewBitset(64)
 	patternA.Set(2, 4, 22, 24, 42, 44, 62)
 	TryToLearn(t, 80, ds, 5, *patternA)
 	t.Log(ds)
@@ -45,9 +46,9 @@ func TestLearn64PatternAB_5(t *testing.T) {
 	rand.Seed(1979)
 	ds := htm.NewDendriteSegment(64)
 	ds.Reset(1, 3, 5, 8, 13, 21)
-	patternA := htm.NewBitset(64)
+	patternA := data.NewBitset(64)
 	patternA.Set(2, 4, 22, 24, 42, 44, 62)
-	patternB := htm.NewBitset(64)
+	patternB := data.NewBitset(64)
 	patternB.Set(22, 23, 24, 25, 26)
 	TryToLearn(t, 90, ds, 5, *patternA, *patternB)
 	t.Log(ds.Connected())
@@ -57,11 +58,11 @@ func TestLearn64PatternABC_5(t *testing.T) {
 	rand.Seed(1979)
 	ds := htm.NewDendriteSegment(64)
 	ds.Reset(1, 3, 5, 8, 13, 21)
-	patternA := htm.NewBitset(64)
+	patternA := data.NewBitset(64)
 	patternA.Set(2, 4, 22, 24, 42, 44, 62)
-	patternB := htm.NewBitset(64)
+	patternB := data.NewBitset(64)
 	patternB.Set(22, 23, 24, 25, 26)
-	patternC := htm.NewBitset(64)
+	patternC := data.NewBitset(64)
 	patternC.Set(3, 13, 21, 39, 47)
 	TryToLearn(t, 110, ds, 5, *patternA, *patternB, *patternC)
 	t.Log(ds.Connected())

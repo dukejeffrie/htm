@@ -2,7 +2,7 @@
 //
 // Bits are stored into a variable-length slice of 64-bit integers.
 
-package htm
+package data
 
 import "fmt"
 import "bufio"

@@ -4,6 +4,7 @@ package htm
 
 import "fmt"
 import "bytes"
+import "github.com/dukejeffrie/htm/data"
 
 const (
 	CONNECTION_THRESHOLD = 0.6
@@ -15,13 +16,13 @@ const (
 
 type PermanenceMap struct {
 	permanence map[int]float32
-	synapses   *Bitset
+	synapses   *data.Bitset
 }
 
 func NewPermanenceMap(numBits int) *PermanenceMap {
 	result := &PermanenceMap{
 		permanence: make(map[int]float32),
-		synapses:   NewBitset(numBits),
+		synapses:   data.NewBitset(numBits),
 	}
 	return result
 }
@@ -69,11 +70,11 @@ func (pm PermanenceMap) String() string {
 	return fmt.Sprintf("(%d connected, %+v)", pm.synapses.NumSetBits(), pm.permanence)
 }
 
-func (pm PermanenceMap) Connected() Bitset {
+func (pm PermanenceMap) Connected() data.Bitset {
 	return *pm.synapses
 }
 
-func (pm PermanenceMap) Overlap(input Bitset, weak bool) int {
+func (pm PermanenceMap) Overlap(input data.Bitset, weak bool) int {
 	if weak {
 		max := input.NumSetBits()
 		count := 0
@@ -91,7 +92,7 @@ func (pm PermanenceMap) Overlap(input Bitset, weak bool) int {
 	}
 }
 
-func (pm *PermanenceMap) narrow(input Bitset) {
+func (pm *PermanenceMap) narrow(input data.Bitset) {
 	for k, v := range pm.permanence {
 		if input.IsSet(k) {
 			v += PERMANENCE_INC
@@ -102,7 +103,7 @@ func (pm *PermanenceMap) narrow(input Bitset) {
 	}
 }
 
-func (pm *PermanenceMap) weaken(input Bitset) {
+func (pm *PermanenceMap) weaken(input data.Bitset) {
 	for k, v := range pm.permanence {
 		if input.IsSet(k) {
 			v -= PERMANENCE_DEC
@@ -112,13 +113,13 @@ func (pm *PermanenceMap) weaken(input Bitset) {
 }
 
 type CycleHistory struct {
-	events *Bitset
+	events *data.Bitset
 	cycle  int
 }
 
 func NewCycleHistory(length int) *CycleHistory {
 	result := &CycleHistory{
-		events: NewBitset(length),
+		events: data.NewBitset(length),
 		cycle:  -length,
 	}
 	return result
@@ -173,7 +174,7 @@ func NewDendriteSegment(numBits int) *DendriteSegment {
 	return ds
 }
 
-func (ds *DendriteSegment) Learn(input Bitset, active bool, minOverlap int) {
+func (ds *DendriteSegment) Learn(input data.Bitset, active bool, minOverlap int) {
 	ds.activationHistory.Record(active)
 	if active {
 		ds.narrow(input)
@@ -186,7 +187,7 @@ func (ds *DendriteSegment) Learn(input Bitset, active bool, minOverlap int) {
 	}
 }
 
-func (ds *DendriteSegment) broaden(input Bitset, minOverlap int) {
+func (ds *DendriteSegment) broaden(input data.Bitset, minOverlap int) {
 	newPermanence := PERMANENCE_MIN + ds.Boost
 	if newPermanence > CONNECTION_THRESHOLD {
 		newPermanence = CONNECTION_THRESHOLD
@@ -216,14 +217,14 @@ type DistalSegment struct {
 type SegmentUpdate struct {
 	pos          int
 	sequence     bool
-	bitsToUpdate *Bitset
+	bitsToUpdate *data.Bitset
 }
 
 func (u SegmentUpdate) String() string {
 	return fmt.Sprintf("@%d(seq=%t)%v", u.pos, u.sequence, *u.bitsToUpdate)
 }
 
-func NewSegmentUpdate(pos int, sequence bool, state *Bitset) *SegmentUpdate {
+func NewSegmentUpdate(pos int, sequence bool, state *data.Bitset) *SegmentUpdate {
 	result := &SegmentUpdate{
 		pos:          pos,
 		sequence:     sequence,
@@ -253,7 +254,7 @@ func NewDistalSegmentGroup() *DistalSegmentGroup {
 	}
 }
 
-func (g DistalSegmentGroup) ComputeActive(activeState Bitset, minOverlap int, weak bool) (resultIndex, resultOverlap int) {
+func (g DistalSegmentGroup) ComputeActive(activeState data.Bitset, minOverlap int, weak bool) (resultIndex, resultOverlap int) {
 	resultIndex = -1
 	resultOverlap = -1
 	hasSequence := false
@@ -271,7 +272,7 @@ func (g DistalSegmentGroup) ComputeActive(activeState Bitset, minOverlap int, we
 	return
 }
 
-func (g DistalSegmentGroup) HasActiveSegment(activeState Bitset, minOverlap int) bool {
+func (g DistalSegmentGroup) HasActiveSegment(activeState data.Bitset, minOverlap int) bool {
 	for _, s := range g.segments {
 		if s.Connected().Overlap(activeState) >= minOverlap {
 			return true
@@ -284,8 +285,8 @@ func (g DistalSegmentGroup) Segment(i int) DistalSegment {
 	return *g.segments[i]
 }
 
-func (g *DistalSegmentGroup) CreateUpdate(sIndex int, activeState Bitset, minSynapses int) *SegmentUpdate {
-	state := NewBitset(activeState.Len())
+func (g *DistalSegmentGroup) CreateUpdate(sIndex int, activeState data.Bitset, minSynapses int) *SegmentUpdate {
+	state := data.NewBitset(activeState.Len())
 	if sIndex >= 0 {
 		s := g.segments[sIndex]
 		state.ResetTo(s.Connected())

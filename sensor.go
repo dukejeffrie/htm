@@ -4,6 +4,7 @@ package htm
 
 import "fmt"
 import "math/rand"
+import "github.com/dukejeffrie/htm/data"
 
 // This is one input
 type RawInput struct {
@@ -11,11 +12,11 @@ type RawInput struct {
 	IntValue int
 }
 
-type DecoderFunction func(in RawInput) (out Bitset, err error)
+type DecoderFunction func(in RawInput) (out data.Bitset, err error)
 
 type Input struct {
 	Name  string
-	Value Bitset
+	Value data.Bitset
 }
 
 func (i Input) String() string {
@@ -51,13 +52,13 @@ func NewCategoryDecoder(n, w int) (DecoderFunction, error) {
 	if n < w*4 {
 		return nil, fmt.Errorf("Cannnot create category decoder: n = %d is too small (must be at least 4 times %d)", n, w)
 	}
-	bits := make(map[int]Bitset)
-	return func(in RawInput) (out Bitset, err error) {
+	bits := make(map[int]data.Bitset)
+	return func(in RawInput) (out data.Bitset, err error) {
 		key := in.IntValue
 		var ok bool
 		out, ok = bits[key]
 		if !ok {
-			out = *NewBitset(n)
+			out = *data.NewBitset(n)
 			for i := 0; i < w; i++ {
 				out.Set(rand.Intn(n))
 			}
@@ -76,10 +77,10 @@ func NewScalarDecoder(n, w, min, max int) (DecoderFunction, error) {
 	if bucketSize < 1 {
 		bucketSize = 1
 	}
-	return func(in RawInput) (out Bitset, err error) {
+	return func(in RawInput) (out data.Bitset, err error) {
 		val := in.IntValue
 		bucket := (val - min) / bucketSize
-		out = *NewBitset(n)
+		out = *data.NewBitset(n)
 		out.SetRange(bucket, bucket+w)
 		return out, nil
 	}, nil

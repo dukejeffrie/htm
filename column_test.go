@@ -1,13 +1,14 @@
 package htm
 
 import "testing"
+import "github.com/dukejeffrie/htm/data"
 
 func BenchmarkColumnOverlap(b *testing.B) {
 	c := NewColumn(64, 1)
 	connections := []int{1, 3, 5, 8, 11}
 	c.ResetConnections(connections)
-	input := NewBitset(64).Set(1, 5, 22)
-	result := NewBitset(64).Set(1, 5, 22, 60)
+	input := data.NewBitset(64).Set(1, 5, 22)
+	result := data.NewBitset(64).Set(1, 5, 22, 60)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		result.Overlap(*input)
@@ -38,14 +39,14 @@ func TestNewColumn(t *testing.T) {
 
 func TestPredict(t *testing.T) {
 	c := NewColumn(64, 4)
-	active1 := NewBitset(64).Set(2, 20)
-	active2 := NewBitset(64).Set(11, 31)
+	active1 := data.NewBitset(64).Set(2, 20)
+	active2 := data.NewBitset(64).Set(11, 31)
 	update := c.distal[1].CreateUpdate(-1, *active1, 2)
 	c.distal[1].Apply(update, true)
 	update = c.distal[2].CreateUpdate(-1, *active2, 2)
 	c.distal[2].Apply(update, true)
 
-	state := NewBitset(64).Set(2)
+	state := data.NewBitset(64).Set(2)
 	c.Predict(*state, 1)
 	pred := c.Predictive()
 	if !pred.AllSet(1) || pred.NumSetBits() != 1 {
@@ -65,14 +66,14 @@ func TestPredict(t *testing.T) {
 
 func TestFindBestSegment(t *testing.T) {
 	c := NewColumn(64, 4)
-	active1 := NewBitset(64).Set(2, 20, 22)
-	active2 := NewBitset(64).Set(11, 31)
+	active1 := data.NewBitset(64).Set(2, 20, 22)
+	active2 := data.NewBitset(64).Set(11, 31)
 	update := c.distal[1].CreateUpdate(-1, *active1, 2)
 	c.distal[1].Apply(update, true)
 	update = c.distal[2].CreateUpdate(-1, *active2, 2)
 	c.distal[2].Apply(update, true)
 
-	state := NewBitset(64).Set(2)
+	state := data.NewBitset(64).Set(2)
 	cell, s, overlap := c.FindBestSegment(*state, 1, false)
 	if cell != 1 || s != 0 || overlap != 1 {
 		t.Errorf("FindBestSegment(%v,minOverlap=%d): %d, %v, %d", *state, 1, cell, s, overlap)

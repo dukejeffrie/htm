@@ -1,6 +1,6 @@
 // Unit tests for sensor implementation
 
-package htm
+package data
 
 import "fmt"
 import "io"

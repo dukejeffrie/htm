@@ -1,6 +1,7 @@
 package htm
 
 import "testing"
+import "github.com/dukejeffrie/htm/data"
 
 func TestMinOverlap(t *testing.T) {
 	l := NewRegion(RegionParameters{
@@ -15,7 +16,7 @@ func TestMinOverlap(t *testing.T) {
 	columnRand.Seed(0)
 	l.RandomizeColumns(20)
 
-	input := NewBitset(2048)
+	input := data.NewBitset(2048)
 	input.SetRange(0, 20)
 
 	l.ConsumeInput(*input)
@@ -46,8 +47,8 @@ func TestRegionFeedBack(t *testing.T) {
 		MinimumInputOverlap:  2,
 	})
 	l.RandomizeColumns(32)
-	inputA := NewBitset(64).Set(1, 5)
-	inputB := NewBitset(64).Set(2, 10)
+	inputA := data.NewBitset(64).Set(1, 5)
+	inputB := data.NewBitset(64).Set(2, 10)
 
 	maxAttempts := 77
 	for !l.SensedInput().Equals(*inputB) && maxAttempts > 0 {
@@ -84,7 +85,7 @@ func TestConsumeInput(t *testing.T) {
 	columnRand.Seed(1)
 	l.RandomizeColumns(2)
 
-	input := NewBitset(64)
+	input := data.NewBitset(64)
 	input.SetRange(0, 1)
 
 	l.ConsumeInput(*input)
@@ -99,7 +100,7 @@ func TestConsumeInput(t *testing.T) {
 	t.Log(output)
 
 	// Let's store all the top cells connections into the input bit, so we get them again the second time around.
-	nextInput := NewBitset(64)
+	nextInput := data.NewBitset(64)
 
 	for _, el := range l.scores {
 		col := l.columns[el.index]
@@ -108,7 +109,7 @@ func TestConsumeInput(t *testing.T) {
 	lastScores := make([]ScoredElement, l.scores.Len())
 	copy(lastScores, l.scores)
 
-	l.ConsumeInput(*NewBitset(64))
+	l.ConsumeInput(*data.NewBitset(64))
 	if l.scores.Len() != 0 {
 		t.Errorf("Leftovers in scores: %v", l.scores)
 	}
@@ -164,7 +165,7 @@ func BenchmarkConsumeInput(b *testing.B) {
 	l.Learning = false
 	l.RandomizeColumns(28)
 
-	input := NewBitset(2048)
+	input := data.NewBitset(2048)
 	input.Set(columnRand.Perm(2048)[0:28]...)
 
 	b.ResetTimer()

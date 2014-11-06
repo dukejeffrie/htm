@@ -7,6 +7,7 @@ import "fmt"
 import "math/rand"
 import "testing"
 import "github.com/dukejeffrie/htm"
+import "github.com/dukejeffrie/htm/data"
 
 type LoggerInterface interface {
 	Errorf(format string, args ...interface{})
@@ -18,13 +19,13 @@ type LoggerInterface interface {
 
 type TpTest struct {
 	LoggerInterface
-	inputA *htm.Bitset
-	inputB *htm.Bitset
+	inputA *data.Bitset
+	inputB *data.Bitset
 
 	layer0     *htm.Region
-	expected0  *htm.Bitset
-	active0    *htm.Bitset
-	predicted0 *htm.Bitset
+	expected0  *data.Bitset
+	active0    *data.Bitset
+	predicted0 *data.Bitset
 	step       int
 	Verify     bool
 }
@@ -42,12 +43,12 @@ func NewTpTest(t LoggerInterface) *TpTest {
 	result := &TpTest{
 		LoggerInterface: t,
 		step:            0,
-		inputA:          htm.NewBitset(64),
-		inputB:          htm.NewBitset(64),
+		inputA:          data.NewBitset(64),
+		inputB:          data.NewBitset(64),
 		layer0:          htm.NewRegion(params),
-		expected0:       htm.NewBitset(params.Width * params.Height),
-		active0:         htm.NewBitset(params.Width * params.Height),
-		predicted0:      htm.NewBitset(params.Width * params.Height),
+		expected0:       data.NewBitset(params.Width * params.Height),
+		active0:         data.NewBitset(params.Width * params.Height),
+		predicted0:      data.NewBitset(params.Width * params.Height),
 		Verify:          true,
 	}
 
@@ -67,7 +68,7 @@ func NewTpTest(t LoggerInterface) *TpTest {
 	return result
 }
 
-func (tp *TpTest) Step(input htm.Bitset) {
+func (tp *TpTest) Step(input data.Bitset) {
 	tp.step++
 	tp.layer0.ConsumeInput(input)
 	if !tp.Verify {
@@ -99,7 +100,7 @@ func (tp *TpTest) checkPredicted0() {
 	}
 }
 
-func (tp *TpTest) checkPredictedInput(input htm.Bitset) {
+func (tp *TpTest) checkPredictedInput(input data.Bitset) {
 	if !tp.layer0.PredictedInput().Equals(input) {
 		tp.Errorf("(t=%d) Bad predicted input. Expected: %v, but got: %v", tp.step,
 			input, tp.layer0.PredictedInput())
@@ -133,7 +134,7 @@ func TestTp_LearnAAB(t *testing.T) {
 		test.Step(*test.inputB)
 	}
 
-	aOrB := htm.NewBitset(test.layer0.InputLength)
+	aOrB := data.NewBitset(test.layer0.InputLength)
 	aOrB.ResetTo(*test.inputA)
 	aOrB.Or(*test.inputB)
 
@@ -163,7 +164,7 @@ func BenchmarkTp_AAB(b *testing.B) {
 func TestTp_AAxB(t *testing.T) {
 	test := NewTpTest(t)
 	test.Verify = false
-	random := htm.NewBitset(test.layer0.InputLength)
+	random := data.NewBitset(test.layer0.InputLength)
 	for i := 0; i < 8000; i++ {
 		test.Step(*test.inputA)
 		test.Step(*test.inputA)
@@ -172,7 +173,7 @@ func TestTp_AAxB(t *testing.T) {
 		test.Step(*test.inputB)
 	}
 
-	aOrB := htm.NewBitset(test.layer0.InputLength)
+	aOrB := data.NewBitset(test.layer0.InputLength)
 	aOrB.ResetTo(*test.inputA)
 	aOrB.Or(*test.inputB)
 

@@ -4,6 +4,7 @@ package htm
 
 import "fmt"
 import "math/rand"
+import "github.com/dukejeffrie/htm/data"
 
 var columnSource = rand.NewSource(1979)
 var columnRand = rand.New(columnSource)
@@ -12,9 +13,9 @@ var columnRand = rand.New(columnSource)
 type Column struct {
 	Index int
 	// The bitset of cells that are active.
-	active *Bitset
+	active *data.Bitset
 	// The bitset of cells that are predicted.
-	predictive *Bitset
+	predictive *data.Bitset
 
 	// Cell that was selected for learning.
 	learning       int
@@ -29,8 +30,8 @@ type Column struct {
 
 func NewColumn(inputSize, height int) *Column {
 	result := &Column{
-		active:         NewBitset(height),
-		predictive:     NewBitset(height),
+		active:         data.NewBitset(height),
+		predictive:     data.NewBitset(height),
 		proximal:       NewDendriteSegment(inputSize),
 		learning:       -1,
 		learningTarget: 0,
@@ -55,15 +56,15 @@ func (c Column) String() string {
 		c.Connected())
 }
 
-func (c Column) Connected() Bitset {
+func (c Column) Connected() data.Bitset {
 	return c.proximal.Connected()
 }
 
-func (c Column) Active() Bitset {
+func (c Column) Active() data.Bitset {
 	return *c.active
 }
 
-func (c Column) Predictive() Bitset {
+func (c Column) Predictive() data.Bitset {
 	return *c.predictive
 }
 
@@ -83,11 +84,11 @@ func (c *Column) ResetConnections(connected []int) {
 	c.proximal.Reset(connected...)
 }
 
-func (c *Column) LearnFromInput(input Bitset, minOverlap int) {
+func (c *Column) LearnFromInput(input data.Bitset, minOverlap int) {
 	c.proximal.Learn(input, !c.Active().IsZero(), minOverlap)
 }
 
-func (c *Column) Predict(activeState Bitset, minOverlap int) {
+func (c *Column) Predict(activeState data.Bitset, minOverlap int) {
 	c.predictive.Reset()
 	for i := 0; i < c.Height(); i++ {
 		if c.distal[i].HasActiveSegment(activeState, minOverlap) {
@@ -97,7 +98,7 @@ func (c *Column) Predict(activeState Bitset, minOverlap int) {
 	}
 }
 
-func (c Column) FindBestSegment(state Bitset, minOverlap int, weak bool) (bestCell, bestSegment, bestOverlap int) {
+func (c Column) FindBestSegment(state data.Bitset, minOverlap int, weak bool) (bestCell, bestSegment, bestOverlap int) {
 	bestCell = -1
 	bestSegment = -1
 	bestOverlap = minOverlap - 1
@@ -144,7 +145,7 @@ func (c *Column) AdaptSegments() {
 	}
 }
 
-func (c *Column) LearnPrediction(state Bitset, minOverlap int) bool {
+func (c *Column) LearnPrediction(state data.Bitset, minOverlap int) bool {
 	c.learning = -1
 	cell, sIndex, _ := c.FindBestSegment(state, minOverlap, false)
 	if sIndex >= 0 {
@@ -159,7 +160,7 @@ func (c *Column) LearnPrediction(state Bitset, minOverlap int) bool {
 	return false
 }
 
-func (c *Column) ConfirmPrediction(state Bitset) bool {
+func (c *Column) ConfirmPrediction(state data.Bitset) bool {
 	if c.learning >= 0 && state.IsSet(c.CellId(c.learning)) {
 		if htmLogger != nil {
 			htmLogger.Printf("\t(%d, %d)=%04d: Confirmed prediction from lPredictive(t-1)", c.Index, c.learning, c.CellId(c.learning))
@@ -169,7 +170,7 @@ func (c *Column) ConfirmPrediction(state Bitset) bool {
 	return false
 }
 
-func (c *Column) LearnSequence(learnState Bitset) {
+func (c *Column) LearnSequence(learnState data.Bitset) {
 	if learnState.IsZero() {
 		// Skip learning an empty sequence.
 		if htmLogger != nil {

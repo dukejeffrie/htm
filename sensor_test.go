@@ -4,6 +4,7 @@ package htm
 
 import "fmt"
 import "testing"
+import "github.com/dukejeffrie/htm/data"
 
 const (
 	BLUE   = iota
@@ -99,7 +100,7 @@ func TestColors(t *testing.T) {
 func TestScalars(t *testing.T) {
 	sink, _ := GenerateScalars(2048, 28, 0, 100)
 	s1, _ := sink.SendScalar(4)
-	b1 := NewBitset(2048)
+	b1 := data.NewBitset(2048)
 	b1.SetRange(4, 4+28)
 	if !s1.Value.Equals(*b1) {
 		t.Errorf("Scalar mismatch: expected %v, but got: %v", b1, s1)

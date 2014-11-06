@@ -6,6 +6,7 @@ import "bufio"
 import "container/heap"
 import "flag"
 import "fmt"
+import "github.com/dukejeffrie/htm/data"
 import "io"
 import "log"
 import "os"
@@ -77,15 +78,15 @@ type RegionParameters struct {
 type Region struct {
 	RegionParameters
 	columns              []*Column
-	output               *Bitset
-	active               *Bitset
-	lastActive           *Bitset
-	predictive           *Bitset
-	lastPredictive       *Bitset
-	learnActiveState     *Bitset
-	learnActiveStateLast *Bitset
-	learnPredictiveState *Bitset
-	scores TopN
+	output               *data.Bitset
+	active               *data.Bitset
+	lastActive           *data.Bitset
+	predictive           *data.Bitset
+	lastPredictive       *data.Bitset
+	learnActiveState     *data.Bitset
+	learnActiveStateLast *data.Bitset
+	learnPredictiveState *data.Bitset
+	scores               TopN
 }
 
 // Creates a new named region with the given parameters.
@@ -94,15 +95,15 @@ func NewRegion(params RegionParameters) *Region {
 	result := &Region{
 		RegionParameters:     params,
 		columns:              make([]*Column, params.Width),
-		output:               NewBitset(params.Width * params.Height),
-		active:               NewBitset(params.Width * params.Height),
-		lastActive:           NewBitset(params.Width * params.Height),
-		predictive:           NewBitset(params.Width * params.Height),
-		lastPredictive:       NewBitset(params.Width * params.Height),
-		learnActiveState:     NewBitset(params.Width * params.Height),
-		learnActiveStateLast: NewBitset(params.Width * params.Height),
-		learnPredictiveState: NewBitset(params.Width * params.Height),
-		scores: make([]ScoredElement, 0, params.MaximumFiringColumns+1),
+		output:               data.NewBitset(params.Width * params.Height),
+		active:               data.NewBitset(params.Width * params.Height),
+		lastActive:           data.NewBitset(params.Width * params.Height),
+		predictive:           data.NewBitset(params.Width * params.Height),
+		lastPredictive:       data.NewBitset(params.Width * params.Height),
+		learnActiveState:     data.NewBitset(params.Width * params.Height),
+		learnActiveStateLast: data.NewBitset(params.Width * params.Height),
+		learnPredictiveState: data.NewBitset(params.Width * params.Height),
+		scores:               make([]ScoredElement, 0, params.MaximumFiringColumns+1),
 	}
 	for i := 0; i < params.Width; i++ {
 		result.columns[i] = NewColumn(params.InputLength, params.Height)
@@ -126,19 +127,19 @@ func (l Region) Column(i int) Column {
 	return *l.columns[i]
 }
 
-func (l Region) ActiveState() Bitset {
+func (l Region) ActiveState() data.Bitset {
 	return *l.active
 }
 
-func (l Region) PredictiveState() Bitset {
+func (l Region) PredictiveState() data.Bitset {
 	return *l.predictive
 }
 
-func (l Region) LearningActiveState() Bitset {
+func (l Region) LearningActiveState() data.Bitset {
 	return *l.learnActiveState
 }
 
-func (l Region) LearningPredictiveState() Bitset {
+func (l Region) LearningPredictiveState() data.Bitset {
 	return *l.learnPredictiveState
 }
 
@@ -159,8 +160,8 @@ func (l *Region) ResetColumnSynapses(i int, indices ...int) {
 	col.SetBoost(columnRand.Float32() * 0.00001)
 }
 
-func (l *Region) SensedInput() Bitset {
-	dest := NewBitset(l.InputLength)
+func (l *Region) SensedInput() data.Bitset {
+	dest := data.NewBitset(l.InputLength)
 	for _, col := range l.columns {
 		if !col.Active().IsZero() {
 			dest.Or(col.Connected())
@@ -169,8 +170,8 @@ func (l *Region) SensedInput() Bitset {
 	return *dest
 }
 
-func (l *Region) FeedBack(output Bitset) *Bitset {
-	dest := NewBitset(l.InputLength)
+func (l *Region) FeedBack(output data.Bitset) *data.Bitset {
+	dest := data.NewBitset(l.InputLength)
 	output.Foreach(func(cellId int) {
 		col := l.columns[cellId/l.Height()]
 		cell := cellId % l.Height()
@@ -182,8 +183,8 @@ func (l *Region) FeedBack(output Bitset) *Bitset {
 	return dest
 }
 
-func (l *Region) PredictedInput() Bitset {
-	dest := NewBitset(l.InputLength)
+func (l *Region) PredictedInput() data.Bitset {
+	dest := data.NewBitset(l.InputLength)
 	for _, col := range l.columns {
 		if !col.Predictive().IsZero() {
 			dest.Or(col.Connected())
@@ -192,7 +193,7 @@ func (l *Region) PredictedInput() Bitset {
 	return *dest
 }
 
-func (l *Region) ConsumeInput(input Bitset) {
+func (l *Region) ConsumeInput(input data.Bitset) {
 	if htmLogger != nil {
 		htmLogger.Printf("\n============ %s Consume(learning=%t, input=%v)",
 			l.Name, l.Learning, input)
@@ -241,11 +242,11 @@ func (l *Region) ConsumeInput(input Bitset) {
 	}
 }
 
-func (l *Region) Output() Bitset {
+func (l *Region) Output() data.Bitset {
 	return *l.output
 }
 
-func (l *Region) Learn(input Bitset) {
+func (l *Region) Learn(input data.Bitset) {
 	// Temporal pooler learning. Learn states are a subsample of the full state, with
 	// hand-picked bits comprised of one cell per column.
 

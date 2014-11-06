@@ -1,6 +1,7 @@
 package htm
 
 import "testing"
+import "github.com/dukejeffrie/htm/data"
 
 func TestNewDendriteSegment(t *testing.T) {
 	connections := []int{1, 3, 5, 8, 13}
@@ -27,7 +28,7 @@ func TestPermanence(t *testing.T) {
 	if !m.Connected().IsSet(8) {
 		t.Errorf("Should have connected bit 8: %v", *m)
 	}
-	input := NewBitset(64).Set(1, 10, 20, 21, 22, 23)
+	input := data.NewBitset(64).Set(1, 10, 20, 21, 22, 23)
 	if m.Overlap(*input, false) != 2 {
 		t.Errorf("Bad strong overlap with input=%v: %v", *input, *m)
 	}
@@ -40,7 +41,7 @@ func TestNarrowSynapses(t *testing.T) {
 	connections := []int{1, 3, 5, 8, 13}
 	ds := NewPermanenceMap(64)
 	ds.Reset(connections...)
-	input := NewBitset(64)
+	input := data.NewBitset(64)
 	input.Set(1, 5, 22)
 	ds.narrow(*input)
 	ds.narrow(*input)
@@ -62,7 +63,7 @@ func TestNarrowSynapses(t *testing.T) {
 func BenchmarkNarrowSynapses(b *testing.B) {
 	ds := NewPermanenceMap(64)
 	ds.Reset(1, 3, 5, 8, 13)
-	input := NewBitset(64)
+	input := data.NewBitset(64)
 	input.Set(1, 5, 22)
 	for i := 0; i < b.N; i++ {
 		ds.narrow(*input)
@@ -74,7 +75,7 @@ func TestWeakenSynapses(t *testing.T) {
 	pm.Reset(1, 10, 20)
 	pm.Set(30, CONNECTION_THRESHOLD+PERMANENCE_DEC)
 
-	input := NewBitset(64).Set(10, 30)
+	input := data.NewBitset(64).Set(10, 30)
 	pm.weaken(*input)
 	if pm.Get(10) != INITIAL_PERMANENCE-PERMANENCE_DEC {
 		t.Errorf("Bad permanence value @%d after weaken: %v", 10, *pm)
@@ -94,7 +95,7 @@ func TestWeakenSynapses(t *testing.T) {
 func TestBroadenSynapses(t *testing.T) {
 	ds := NewDendriteSegment(64)
 	ds.Reset(1, 3, 5, 8, 13)
-	input := NewBitset(64)
+	input := data.NewBitset(64)
 	input.Set(1, 5, 22)
 	for i := 0; i < 1000 && ds.permanence[3] >= PERMANENCE_MIN; i++ {
 		ds.narrow(*input)
@@ -121,7 +122,7 @@ func TestBroadenSynapses(t *testing.T) {
 func BenchmarkBroadenSynapses(b *testing.B) {
 	ds := NewDendriteSegment(64)
 	ds.Reset(1, 3, 5, 8, 13)
-	input := NewBitset(64)
+	input := data.NewBitset(64)
 	input.Set(1, 5, 22)
 	for i := 0; i < b.N; i++ {
 		ds.broaden(*input, 0)
@@ -131,7 +132,7 @@ func BenchmarkBroadenSynapses(b *testing.B) {
 func TestTrim(t *testing.T) {
 	ds := NewDendriteSegment(64)
 	ds.Reset(1, 3, 5, 8, 13)
-	input := NewBitset(64)
+	input := data.NewBitset(64)
 	input.Set(1, 5, 22)
 	for i := 0; i < 10 && ds.permanence[5] >= CONNECTION_THRESHOLD; i++ {
 		ds.narrow(*input)
@@ -182,14 +183,14 @@ func TestCycleHistory(t *testing.T) {
 
 func TestDistalSegmentGroup(t *testing.T) {
 	group := NewDistalSegmentGroup()
-	v1 := NewBitset(64).Set(1, 10)
-	v2 := NewBitset(64).Set(2, 20)
+	v1 := data.NewBitset(64).Set(1, 10)
+	v2 := data.NewBitset(64).Set(2, 20)
 	u1 := group.CreateUpdate(-1, *v1, 2)
 	u2 := group.CreateUpdate(-1, *v2, 2)
 	group.AddUpdate(u1)
 	group.AddUpdate(u2)
 
-	active := NewBitset(64).Set(10)
+	active := data.NewBitset(64).Set(10)
 
 	if group.HasActiveSegment(*active, 1) {
 		t.Errorf("Test is broken, group should be empty. %v", *group)
