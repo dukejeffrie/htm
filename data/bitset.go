@@ -28,14 +28,6 @@ type Bitset struct {
 	length int
 }
 
-func (b Bitset) Hash() int {
-	h := b.binary[0]
-	for pos := 1; pos < b.length; pos++ {
-		h |= b.binary[pos]
-	}
-	return int(h)
-}
-
 func (b Bitset) IsSet(index int) bool {
 	if index < 0 || index > b.length {
 		return false
@@ -174,7 +166,7 @@ func (b Bitset) Equals(other Bitset) bool {
 func (b *Bitset) ResetTo(other Bitset) {
 	if b.length != other.length {
 		panic(fmt.Errorf(
-			"Cannot copy from bitset of different length (%d != %d)", b.length, other.length))
+			"Cannot ResetTo bitset of different length (%d != %d)", b.length, other.length))
 	}
 	copy(b.binary, other.binary)
 }
@@ -182,7 +174,7 @@ func (b *Bitset) ResetTo(other Bitset) {
 func (b *Bitset) Or(other Bitset) {
 	if b.length != other.length {
 		panic(fmt.Errorf(
-			"Cannot AND bitsets of different length (%d != %d)", b.length, other.length))
+			"Cannot OR bitsets of different length (%d != %d)", b.length, other.length))
 	}
 	for i, v := range other.binary {
 		b.binary[i] |= v
@@ -201,37 +193,20 @@ func (b *Bitset) And(other Bitset) {
 
 func (b *Bitset) SetFromBitsetAt(other Bitset, offset int) {
 	if offset+other.length > b.length {
-		panic(fmt.Errorf("AND operation would go past end! Needs %d bytes, has %d.",
+		panic(fmt.Errorf("SetFromBitset() would go past end! Needs %d bits, has %d.",
 			offset+other.length, b.length))
 	}
-	b.appendAt(other, offset)
-}
-
-func (b *Bitset) appendAt(other Bitset, offset int) {
 	rem := uint64(offset % 64)
-	l := offset + other.length
-	num := (l-1)/64 + 1
-	num -= len(b.binary)
 	dest := offset / 64
 
-	for src := 0; src < len(other.binary); src++ {
-		el := other.binary[src]
-		b.binary[dest] |= el << rem
-		if num > 0 {
-			b.binary = append(b.binary, el>>(64-rem))
-			num--
-		}
+	vr := uint64(0)
+	for _, el := range other.binary {
+		b.binary[dest] |= (el << rem) | vr
+		vr = el >> (64 - rem)
 		dest++
 	}
-	if l > b.length {
-		b.length = l
-	}
-}
-
-func (b *Bitset) Truncate(width int) {
-	if width < b.length {
-		b.length = width
-		b.binary = b.binary[0 : (b.length-1)/64]
+	if vr != 0 {
+		b.binary[dest] |= vr
 	}
 }
 

@@ -4,29 +4,13 @@ package data
 
 import "fmt"
 import "io"
-import "testing"
 import "math/rand"
+import "strings"
+import "testing"
 
 func ExpectEquals(t *testing.T, message string, expected interface{}, actual interface{}) {
 	if expected != actual {
 		t.Errorf("%s: expected %v, but was: %v", message, expected, actual)
-	}
-}
-
-func ExpectContentEquals(t *testing.T, message string, expected []int, actual []int) {
-	if len(expected) != len(actual) {
-		t.Errorf("%s: length differs (%v != %v), actual: %v",
-			message, len(expected), len(actual), actual)
-	}
-	failed := false
-	for i, v := range expected {
-		if v != actual[i] {
-			t.Logf("%s (element[%d]): %v != %v", message, i, v, actual[i])
-			failed = true
-		}
-	}
-	if failed {
-		t.Fail()
 	}
 }
 
@@ -38,6 +22,11 @@ func TestConstruction(t *testing.T) {
 		t.Error("should be zero:", one)
 	}
 
+	// Check that invalid arguments don't blow up.
+	if one.IsSet(-1) || one.IsSet(one.Len()+1) {
+		t.Error("These bits should never be set.")
+	}
+
 	cent := NewBitset(100)
 	ExpectEquals(t, "cent.length", 100, cent.length)
 	ExpectEquals(t, "cent.binary.length", 2, len(cent.binary))
@@ -47,6 +36,33 @@ func TestConstruction(t *testing.T) {
 
 	three := NewBitset(129)
 	ExpectEquals(t, "three.binary.length", 3, len(three.binary))
+}
+
+func TestEquals(t *testing.T) {
+	rand.Seed(10)
+	b := NewBitset(64)
+	for i := 0; i < 10; i++ {
+		b.Set(rand.Intn(64))
+		if !b.Equals(*b) {
+			t.Errorf("Should be equal to itself: %v", *b)
+		}
+	}
+
+	b2 := b.Clone()
+	if !b.Equals(*b2) {
+		t.Errorf("Should be equal to its clone: %v != %v", *b, *b2)
+	}
+	b2.SetRange(0, 11)
+	if b.Equals(*b2) {
+		t.Errorf("Bitsets should be different, but are not: %v == %v", *b, *b2)
+	}
+
+	b.Reset()
+	b3 := NewBitset(b.Len() + 1)
+	if b.Equals(*b3) {
+		t.Error("Two zeroed bitsets with different lengths should not be equal:",
+			*b, *b3)
+	}
 }
 
 func TestSetAndReset(t *testing.T) {
@@ -61,6 +77,13 @@ func TestSetAndReset(t *testing.T) {
 	b.Set(11, 12)
 	ExpectEquals(t, "bit 127", true, b.IsSet(127))
 	ExpectEquals(t, "num bits", 3, b.NumSetBits())
+	if b.AllSet(0, 11, 12) {
+		t.Errorf("Bit 0 should not be set: %v", *b)
+	}
+	b.Set(0)
+	if !b.AllSet(0, 11, 12) {
+		t.Errorf("Bits 0, 11 and 12 should be set: %v", *b)
+	}
 
 	b.Reset()
 	ExpectEquals(t, "bit 127", false, b.IsSet(127))
@@ -74,6 +97,84 @@ func TestSetAndReset(t *testing.T) {
 	ExpectEquals(t, "bit 111", true, b.IsSet(111))
 	b.Unset(111)
 	ExpectEquals(t, "bit 111", false, b.IsSet(111))
+
+	b2 := NewBitset(b.Len()).Set(1, 2, 3)
+	b2.ResetTo(*b2)
+	if b.Equals(*b2) {
+		t.Errorf("Should be equal, but are not: %v != %v", *b, *b2)
+	}
+}
+
+func TestBitsetReset_DifferentLength(t *testing.T) {
+	defer func() {
+		err := recover()
+		if err == nil {
+			t.Error("Should have failed, but didn't.")
+		} else if !strings.Contains(fmt.Sprint(err), "Cannot ResetTo") {
+			t.Error("Should panic with the ResetTo message, but got: %v", err)
+		}
+	}()
+	b := NewBitset(100)
+	b2 := NewBitset(101)
+	b.ResetTo(*b2)
+}
+
+func TestBitsetAnd(t *testing.T) {
+	b := NewBitset(2048).Set(20, 200, 2000)
+	b2 := b.Clone()
+	b.And(*b)
+	if !b.Equals(*b2) {
+		t.Errorf("Failed b & b == b. Expected %v, but got: %v", *b2, *b)
+	}
+	b.Set(1, 2, 3)
+	b.And(*b2)
+
+	if !b.Equals(*b2) {
+		t.Errorf("Failed (b|[1,2,3]) & b == b. Expected %v, but got: %v", *b2, *b)
+	}
+}
+
+func TestBitsetAnd_DifferentLength(t *testing.T) {
+	defer func() {
+		err := recover()
+		if err == nil {
+			t.Error("Should have failed, but didn't.")
+		} else if !strings.Contains(fmt.Sprint(err), "Cannot AND") {
+			t.Error("Should panic with the AND message, but got: %v", err)
+		}
+	}()
+	b := NewBitset(100)
+	b2 := NewBitset(101)
+	b.And(*b2)
+}
+
+func TestBitsetOr(t *testing.T) {
+	b := NewBitset(2048).Set(20, 200, 2000)
+	b2 := b.Clone()
+	b.Or(*b)
+	if !b.Equals(*b2) {
+		t.Errorf("Failed b | b == b. Expected %v, but got: %v", *b2, *b)
+	}
+	b3 := NewBitset(b.Len()).Set(10, 1000)
+	b.Or(*b3)
+	b2.Set(10, 1000)
+	if !b.Equals(*b2) {
+		t.Errorf("Failed b | c. Expected %v, but got: %v", *b2, *b)
+	}
+}
+
+func TestBitsetOr_DifferentLength(t *testing.T) {
+	defer func() {
+		err := recover()
+		if err == nil {
+			t.Error("Should have failed, but didn't.")
+		} else if !strings.Contains(fmt.Sprint(err), "Cannot OR") {
+			t.Error("Should panic with the OR message, but got: %v", err)
+		}
+	}()
+	b := NewBitset(100)
+	b2 := NewBitset(101)
+	b.Or(*b2)
 }
 
 func TestSetAfterLength(t *testing.T) {
@@ -88,6 +189,10 @@ func TestSetAfterLength(t *testing.T) {
 
 func TestSetRange(t *testing.T) {
 	b := NewBitset(2048)
+	b.SetRange(0, 0)
+	if !b.IsZero() {
+		t.Error("Accepted invalid range [0,0): %v", *b)
+	}
 	b.SetRange(8, 154)
 
 	ExpectEquals(t, "num bits", 154-8, b.NumSetBits())
@@ -126,109 +231,79 @@ func TestIteration(t *testing.T) {
 	}
 }
 
-func TestAppend(t *testing.T) {
+func TestSetFromBitset(t *testing.T) {
 	src := NewBitset(5)
 	src.Set(1)
 	src.Set(4)
 
-	dest := NewBitset(5)
-	dest.appendAt(*src, dest.Len())
+	dest := NewBitset(10)
+	dest.SetFromBitsetAt(*src, 5)
 
-	ExpectEquals(t, "length", 10, dest.Len())
 	if !dest.AllSet(6, 9) {
 		t.Errorf("dest should have 6 and 9: %v", *dest)
 	}
 
-	dest.appendAt(*src, dest.Len())
+	dest = NewBitset(128 + 64).Set(0)
+	src = NewBitset(64).Set(0)
+	dest.SetFromBitsetAt(*src, 128)
 
-	ExpectEquals(t, "length", 15, dest.Len())
-	if !dest.AllSet(6, 9, 11, 14) {
-		t.Errorf("dest should have 6 and 9: %v", *dest)
+	if !dest.AllSet(0, 128) {
+		t.Errorf("dest should have 0 and 128: %v", *dest)
+	}
+
+	src.Set(63)
+	dest.SetFromBitsetAt(*src, 60)
+
+	expected := NewBitset(dest.Len()).Set(0, 60, 123, 128)
+	if !dest.Equals(*expected) {
+		t.Errorf("dest did not match. Expected %v, but got: %v",
+			*expected, *dest)
 	}
 }
 
-func TestAppendLong(t *testing.T) {
-	dest := NewBitset(20)
-	dest.Set(10)
-	src := NewBitset(60)
-	src.Set(2)
-	src.Set(22)
-	src.Set(59)
+func TestSetFromBitset_NotEnoughSpace(t *testing.T) {
+	defer func() {
+		err := recover()
+		if err == nil {
+			t.Error("Should have failed, but didn't.")
+		} else if !strings.Contains(fmt.Sprint(err), "past end") {
+			t.Error("Should panic with the \"past end\" message, but got: %v", err)
+		}
+	}()
 
-	dest.appendAt(*src, dest.Len())
-	ExpectEquals(t, "length", 80, dest.Len())
-	if !dest.AllSet(10, 22, 42, 79) {
-		t.Errorf("dest missing bits: %v", *dest)
-	}
+	src := NewBitset(10)
+	dest := NewBitset(10)
+
+	dest.SetFromBitsetAt(*src, 1)
 }
 
-func AppendBenchmarkTemplate(b *testing.B, srcSize, destSize int,
+func SetFromBitsetBenchmarkTemplate(b *testing.B, srcSize, destSize int,
 	truncate bool) {
 	src := NewBitset(srcSize)
-	src.Set(2, srcSize/2, (srcSize-1)/2*2)
-	b.ResetTimer()
-	dest := NewBitset(destSize)
-	for i := 0; i < b.N; i++ {
-		dest.appendAt(*src, dest.Len())
-		if truncate {
-			dest.Truncate(destSize)
-		} else {
-			dest = NewBitset(destSize)
-		}
-	}
-}
+	src.Set(0, srcSize/2, (srcSize-1)/2*2)
+	dest := NewBitset(destSize + srcSize)
+	dest.Set(0, destSize/2, destSize-1)
 
-func BenchmarkAppendEven64(b *testing.B) {
-	AppendBenchmarkTemplate(b, 64, 64, false)
-}
-
-func BenchmarkAppendEven64T(b *testing.B) {
-	AppendBenchmarkTemplate(b, 64, 64, true)
-}
-
-func BenchmarkAppendEven2048(b *testing.B) {
-	AppendBenchmarkTemplate(b, 2048, 2048, false)
-}
-
-func BenchmarkAppendEven2048T(b *testing.B) {
-	AppendBenchmarkTemplate(b, 2048, 2048, true)
-}
-
-func BenchmarkAppendOdd64(b *testing.B) {
-	AppendBenchmarkTemplate(b, 59, 64, false)
-}
-
-func BenchmarkAppendOdd64T(b *testing.B) {
-	AppendBenchmarkTemplate(b, 59, 64, true)
-}
-
-func BenchmarkAppendOdd2048(b *testing.B) {
-	AppendBenchmarkTemplate(b, 2047, 2048, false)
-}
-
-func BenchmarkAppendOdd2048T(b *testing.B) {
-	AppendBenchmarkTemplate(b, 2047, 2048, true)
-}
-
-func SetFromBitsetAtBenchmarkTemplate(b *testing.B, srcSize int) {
-	src := NewBitset(srcSize)
-	for i := 0; i < srcSize/2; i++ {
-		src.Set(rand.Intn(srcSize))
-	}
-	b.ResetTimer()
-	dest := NewBitset(20480)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		dest.SetFromBitsetAt(*src, 16666)
+		dest.SetFromBitsetAt(*src, destSize)
 	}
 }
 
-func BenchmarkSetFromBitsetAt64(b *testing.B) {
-	SetFromBitsetAtBenchmarkTemplate(b, 64)
+func BenchmarkSetFromBitsetEven64(b *testing.B) {
+	SetFromBitsetBenchmarkTemplate(b, 64, 64, false)
 }
 
-func BenchmarkSetFromBitsetAt2048(b *testing.B) {
-	SetFromBitsetAtBenchmarkTemplate(b, 2048)
+func BenchmarkSetFromBitsetEven2048(b *testing.B) {
+	SetFromBitsetBenchmarkTemplate(b, 2048, 2048, false)
+}
+
+func BenchmarkSetFromBitsetOdd64(b *testing.B) {
+	SetFromBitsetBenchmarkTemplate(b, 59, 64, false)
+}
+
+func BenchmarkSetFromBitsetOdd2048(b *testing.B) {
+	SetFromBitsetBenchmarkTemplate(b, 2047, 2048, false)
 }
 
 func TestPrintBitset(t *testing.T) {
