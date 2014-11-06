@@ -5,6 +5,7 @@ package htm
 import "fmt"
 import "math/rand"
 import "github.com/dukejeffrie/htm/data"
+import "github.com/dukejeffrie/htm/segment"
 
 var columnSource = rand.NewSource(1979)
 var columnRand = rand.New(columnSource)
@@ -22,23 +23,23 @@ type Column struct {
 	learningTarget int
 
 	// Proximal dendrite segment.
-	proximal *DendriteSegment
+	proximal *segment.DendriteSegment
 
 	// Per-cell distal segment group.
-	distal []*DistalSegmentGroup
+	distal []*segment.DistalSegmentGroup
 }
 
 func NewColumn(inputSize, height int) *Column {
 	result := &Column{
 		active:         data.NewBitset(height),
 		predictive:     data.NewBitset(height),
-		proximal:       NewDendriteSegment(inputSize),
+		proximal:       segment.NewDendriteSegment(inputSize),
 		learning:       -1,
 		learningTarget: 0,
-		distal:         make([]*DistalSegmentGroup, height),
+		distal:         make([]*segment.DistalSegmentGroup, height),
 	}
 	for i := 0; i < height; i++ {
-		result.distal[i] = NewDistalSegmentGroup()
+		result.distal[i] = segment.NewDistalSegmentGroup()
 	}
 	return result
 }
@@ -68,7 +69,7 @@ func (c Column) Predictive() data.Bitset {
 	return *c.predictive
 }
 
-func (c Column) Distal(i int) DistalSegmentGroup {
+func (c Column) Distal(i int) segment.DistalSegmentGroup {
 	return *c.distal[i]
 }
 
@@ -116,7 +117,7 @@ func (c Column) FindBestSegment(state data.Bitset, minOverlap int, weak bool) (b
 	}
 	if htmLogger != nil {
 		if bestSegment >= 0 {
-			s := c.distal[bestCell].segments[bestSegment]
+			s := c.distal[bestCell].Segment(bestSegment)
 			htmLogger.Printf("\t\tFind best segment for column=%d, state=%v, minOverlap=%d, weak=%t: (%d, %d)=%04d <= %v (overlap=%d)",
 				c.Index, state, minOverlap, weak, c.Index, bestCell, c.CellId(bestCell),
 				s.Connected(), bestOverlap)

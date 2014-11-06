@@ -28,6 +28,14 @@ type Bitset struct {
 	length int
 }
 
+func (b Bitset) Hash() int {
+	h := b.binary[0]
+	for pos := 1; pos < b.length; pos++ {
+		h |= b.binary[pos]
+	}
+	return int(h)
+}
+
 func (b Bitset) IsSet(index int) bool {
 	if index < 0 || index > b.length {
 		return false

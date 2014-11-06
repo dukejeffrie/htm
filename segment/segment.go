@@ -1,116 +1,14 @@
 // Implementation of the distal dendrite segment, which connects a cell in a region to any other cell in the same region.
 
-package htm
+package segment
 
 import "fmt"
 import "bytes"
 import "github.com/dukejeffrie/htm/data"
+import "math/rand"
 
-const (
-	CONNECTION_THRESHOLD = 0.6
-	INITIAL_PERMANENCE   = 0.66
-	PERMANENCE_MIN       = 0.3
-	PERMANENCE_INC       = float32(0.05)
-	PERMANENCE_DEC       = float32(0.05)
-)
-
-type PermanenceMap struct {
-	permanence map[int]float32
-	synapses   *data.Bitset
-}
-
-func NewPermanenceMap(numBits int) *PermanenceMap {
-	result := &PermanenceMap{
-		permanence: make(map[int]float32),
-		synapses:   data.NewBitset(numBits),
-	}
-	return result
-}
-
-func (pm *PermanenceMap) Reset(connected ...int) {
-	if len(pm.permanence) > 0 {
-		pm.permanence = make(map[int]float32)
-		pm.synapses.Reset()
-	}
-	for _, v := range connected {
-		pm.permanence[v] = INITIAL_PERMANENCE
-	}
-	pm.synapses.Set(connected...)
-}
-
-func (pm PermanenceMap) Len() int {
-	return pm.synapses.Len()
-}
-
-func (pm *PermanenceMap) Get(k int) (v float32) {
-	v = pm.permanence[k]
-	return
-}
-
-func (pm *PermanenceMap) Set(k int, v float32) {
-	if v > 1.0 {
-		v = 1.0
-	} else if v < 0.0 {
-		v = 0.0
-	}
-	if v < PERMANENCE_MIN {
-		pm.synapses.Unset(k)
-		delete(pm.permanence, k)
-		return
-	}
-	pm.permanence[k] = v
-	if v >= CONNECTION_THRESHOLD {
-		pm.synapses.Set(k)
-	} else {
-		pm.synapses.Unset(k)
-	}
-}
-
-func (pm PermanenceMap) String() string {
-	return fmt.Sprintf("(%d connected, %+v)", pm.synapses.NumSetBits(), pm.permanence)
-}
-
-func (pm PermanenceMap) Connected() data.Bitset {
-	return *pm.synapses
-}
-
-func (pm PermanenceMap) Overlap(input data.Bitset, weak bool) int {
-	if weak {
-		max := input.NumSetBits()
-		count := 0
-		for k, _ := range pm.permanence {
-			if input.IsSet(k) {
-				count++
-				if count >= max {
-					break
-				}
-			}
-		}
-		return count
-	} else {
-		return pm.synapses.Overlap(input)
-	}
-}
-
-func (pm *PermanenceMap) narrow(input data.Bitset) {
-	for k, v := range pm.permanence {
-		if input.IsSet(k) {
-			v += PERMANENCE_INC
-		} else {
-			v -= PERMANENCE_DEC
-		}
-		pm.Set(k, v)
-	}
-}
-
-func (pm *PermanenceMap) weaken(input data.Bitset) {
-	for k, v := range pm.permanence {
-		if input.IsSet(k) {
-			v -= PERMANENCE_DEC
-		}
-		pm.Set(k, v)
-	}
-}
+var segmentSource = rand.NewSource(304050)
+var segmentRand = rand.New(segmentSource)
 
 type CycleHistory struct {
 	events *data.Bitset
@@ -159,8 +57,8 @@ type DendriteSegment struct {
 func (ds DendriteSegment) String() string {
 	ac, _ := ds.activationHistory.Average()
 	ov, _ := ds.overlapHistory.Average()
-	return fmt.Sprintf("Dendrite{activationAvg=%f, overlapAvg=%f, boost=%f, perm=%v, syn=%v}",
-		ac, ov, ds.Boost, ds.permanence, ds.synapses)
+	return fmt.Sprintf("Dendrite{activationAvg=%f, overlapAvg=%f, boost=%f, perm=%v}",
+		ac, ov, ds.Boost, ds.PermanenceMap)
 }
 
 func NewDendriteSegment(numBits int) *DendriteSegment {
@@ -188,16 +86,17 @@ func (ds *DendriteSegment) Learn(input data.Bitset, active bool, minOverlap int)
 }
 
 func (ds *DendriteSegment) broaden(input data.Bitset, minOverlap int) {
-	newPermanence := PERMANENCE_MIN + ds.Boost
-	if newPermanence > CONNECTION_THRESHOLD {
-		newPermanence = CONNECTION_THRESHOLD
+	threshold := ds.Config().Threshold
+	newPermanence := ds.Config().Minimum + ds.Boost
+	if newPermanence > threshold {
+		newPermanence = threshold
 	}
 	overlapCount := 0
 	input.Foreach(func(k int) {
 		v := ds.Get(k)
 		if v < newPermanence {
 			ds.Set(k, newPermanence)
-		} else if v >= CONNECTION_THRESHOLD {
+		} else if v >= threshold {
 			overlapCount++
 		}
 	})
@@ -294,7 +193,7 @@ func (g *DistalSegmentGroup) CreateUpdate(sIndex int, activeState data.Bitset, m
 	state.Or(activeState)
 	for num := state.NumSetBits(); num < minSynapses; num = state.NumSetBits() {
 		// TODO(tms): optimize.
-		indices := columnRand.Perm(state.Len())[num:minSynapses]
+		indices := segmentRand.Perm(state.Len())[num:minSynapses]
 		state.Set(indices...)
 	}
 	return NewSegmentUpdate(sIndex, sIndex == -1, state)
@@ -319,13 +218,10 @@ func (g *DistalSegmentGroup) Apply(update *SegmentUpdate, positive bool) {
 	var s *DistalSegment
 	if update.pos == -1 {
 		s = &DistalSegment{
-			PermanenceMap: NewPermanenceMap(update.bitsToUpdate.Len()),
+			PermanenceMap: PermanenceMapFromBits(*update.bitsToUpdate),
 			sequence:      update.sequence,
 		}
 		g.segments = append(g.segments, s)
-		update.bitsToUpdate.Foreach(func(i int) {
-			s.Set(i, INITIAL_PERMANENCE)
-		})
 	} else {
 		s = g.segments[update.pos]
 		if positive {
@@ -335,7 +231,8 @@ func (g *DistalSegmentGroup) Apply(update *SegmentUpdate, positive bool) {
 			// TODO(tms): trim segments.
 		}
 	}
+	/* TODO(tms): restore logger.
 	if htmLogger != nil {
 		htmLogger.Printf("\t\tAfter reinforcement (positive=%t) => %v", positive, *s.PermanenceMap)
-	}
+	}*/
 }
