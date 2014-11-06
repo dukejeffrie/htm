@@ -355,3 +355,31 @@ func TestOverlapBitset(t *testing.T) {
 	beta.Set(4)
 	ExpectEquals(t, "alpha & beta", 4, alpha.Overlap(*beta))
 }
+
+func BenchmarkNumSetBits_Few(b *testing.B) {
+	all := NewBitset(2048).Set(0, 63, 127, 128, 255, 256, 383, 384, 400, 420, 500, 600, 700, 800, 900, 1000, 1100, 1200, 2047)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		all.NumSetBits()
+	}
+}
+
+func BenchmarkNumSetBits_Half(b *testing.B) {
+	all := NewBitset(2048)
+	for i := 0; i < 1024; i++ {
+		all.Set(i * 2)
+	}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		all.NumSetBits()
+	}
+}
+
+func BenchmarkNumSetBits_All(b *testing.B) {
+	all := NewBitset(2048)
+	all.SetRange(0, 2048)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		all.NumSetBits()
+	}
+}

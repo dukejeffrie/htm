@@ -101,12 +101,16 @@ func (c Column) FindBestSegment(state Bitset, minOverlap int, weak bool) (bestCe
 	bestCell = -1
 	bestSegment = -1
 	bestOverlap = minOverlap - 1
+	maxOverlap := state.NumSetBits()
 	for i := 0; i < c.Height(); i++ {
 		sIndex, sOverlap := c.distal[i].ComputeActive(state, minOverlap, weak)
 		if sOverlap > bestOverlap {
 			bestCell = i
 			bestSegment = sIndex
 			bestOverlap = sOverlap
+			if bestOverlap == maxOverlap {
+				break
+			}
 		}
 	}
 	if htmLogger != nil {
@@ -132,14 +136,11 @@ func (c Column) CellId(i int) int {
 }
 
 func (c *Column) AdaptSegments() {
-	for i := 0; i < c.Height(); i++ {
-		if c.distal[i].HasUpdates() {
-			// TODO(tms): incorporate still predicted.
-			if htmLogger != nil {
-				htmLogger.Printf("\tAdapt prediction for cell %04d", c.CellId(i))
-			}
-			c.distal[i].ApplyAll(c.active.IsSet(i))
+	if c.learning >= 0 && c.distal[c.learning].HasUpdates() {
+		if htmLogger != nil {
+			htmLogger.Printf("\tAdapt prediction for cell %04d", c.CellId(c.learning))
 		}
+		c.distal[c.learning].ApplyAll(c.active.IsSet(c.learning))
 	}
 }
 

@@ -26,6 +26,7 @@ func TryToLearn(t *testing.T, maxTries int, ds *htm.DendriteSegment,
 			return result
 		}
 	}
+	fmt.Println()
 	t.Log(fmt.Sprintf("Learned in %d rounds.", result))
 	return result
 }
