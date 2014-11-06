@@ -35,6 +35,39 @@ func TestMinOverlap(t *testing.T) {
 	}
 }
 
+func TestRegionFeedBack(t *testing.T) {
+	l := NewRegion(RegionParameters{
+		Name:                 "Single Region",
+		Learning:             true,
+		Height:               4,
+		Width:                500,
+		InputLength:          64,
+		MaximumFiringColumns: 5,
+		MinimumInputOverlap:  2,
+	})
+	l.RandomizeColumns(32)
+	inputA := NewBitset(64).Set(1, 5)
+	inputB := NewBitset(64).Set(2, 10)
+
+	maxAttempts := 77
+	for !l.SensedInput().Equals(*inputB) && maxAttempts > 0 {
+		maxAttempts--
+		l.ConsumeInput(*inputA)
+		l.ConsumeInput(*inputB)
+	}
+	oB := l.Output().Clone()
+	l.ConsumeInput(*inputA)
+	oA := l.Output().Clone()
+	fA := l.FeedBack(*oA)
+	if !fA.Equals(*inputA) {
+		t.Errorf("Feedback for A=%v does not match: %v", *inputA, *fA)
+	}
+	fB := l.FeedBack(*oB)
+	if !fB.Equals(*inputB) {
+		t.Errorf("Feedback for B=%v does not match: %v", *inputB, *fB)
+	}
+}
+
 func TestConsumeInput(t *testing.T) {
 	// 50 columns with 4 cells each, firing 2% of columns
 	l := NewRegion(RegionParameters{

@@ -3,10 +3,11 @@
 package htm
 
 import "fmt"
+import "bytes"
 
 const (
 	CONNECTION_THRESHOLD = 0.6
-	INITIAL_PERMANENCE   = 0.6
+	INITIAL_PERMANENCE   = 0.66
 	PERMANENCE_MIN       = 0.3
 	PERMANENCE_INC       = float32(0.05)
 	PERMANENCE_DEC       = float32(0.05)
@@ -95,6 +96,15 @@ func (pm *PermanenceMap) narrow(input Bitset) {
 		if input.IsSet(k) {
 			v += PERMANENCE_INC
 		} else {
+			v -= PERMANENCE_DEC
+		}
+		pm.Set(k, v)
+	}
+}
+
+func (pm *PermanenceMap) weaken(input Bitset) {
+	for k, v := range pm.permanence {
+		if input.IsSet(k) {
 			v -= PERMANENCE_DEC
 		}
 		pm.Set(k, v)
@@ -195,5 +205,136 @@ func (ds *DendriteSegment) broaden(input Bitset, minOverlap int) {
 		for k, v := range ds.permanence {
 			ds.Set(k, v*1.01)
 		}
+	}
+}
+
+type DistalSegment struct {
+	*PermanenceMap
+	sequence bool
+}
+
+type SegmentUpdate struct {
+	pos          int
+	sequence     bool
+	bitsToUpdate *Bitset
+}
+
+func (u SegmentUpdate) String() string {
+	return fmt.Sprintf("@%d(seq=%t)%v", u.pos, u.sequence, *u.bitsToUpdate)
+}
+
+func NewSegmentUpdate(pos int, sequence bool, state *Bitset) *SegmentUpdate {
+	result := &SegmentUpdate{
+		pos:          pos,
+		sequence:     sequence,
+		bitsToUpdate: state,
+	}
+	return result
+}
+
+type DistalSegmentGroup struct {
+	segments []*DistalSegment
+	updates  []*SegmentUpdate
+}
+
+func (g DistalSegmentGroup) String() string {
+	var buf bytes.Buffer
+	fmt.Fprintf(&buf, "%d segments, %d updates", len(g.segments), len(g.updates))
+	for _, s := range g.segments {
+		fmt.Fprintf(&buf, "\n\t%v", s)
+	}
+	return buf.String()
+}
+
+func NewDistalSegmentGroup() *DistalSegmentGroup {
+	return &DistalSegmentGroup{
+		segments: make([]*DistalSegment, 0, 15),
+		updates:  make([]*SegmentUpdate, 0, 10),
+	}
+}
+
+func (g DistalSegmentGroup) ComputeActive(activeState Bitset, minOverlap int, weak bool) (resultIndex, resultOverlap int) {
+	resultIndex = -1
+	resultOverlap = -1
+	hasSequence := false
+	for i, s := range g.segments {
+		if overlap := s.Overlap(activeState, weak); overlap >= minOverlap {
+			if overlap > resultOverlap && (!hasSequence || s.sequence) {
+				resultIndex = i
+				resultOverlap = overlap
+				if s.sequence {
+					hasSequence = true
+				}
+			}
+		}
+	}
+	return
+}
+
+func (g DistalSegmentGroup) HasActiveSegment(activeState Bitset, minOverlap int) bool {
+	for _, s := range g.segments {
+		if s.Connected().Overlap(activeState) >= minOverlap {
+			return true
+		}
+	}
+	return false
+}
+
+func (g DistalSegmentGroup) Segment(i int) DistalSegment {
+	return *g.segments[i]
+}
+
+func (g *DistalSegmentGroup) CreateUpdate(sIndex int, activeState Bitset, minSynapses int) *SegmentUpdate {
+	state := NewBitset(activeState.Len())
+	if sIndex >= 0 {
+		s := g.segments[sIndex]
+		state.ResetTo(s.Connected())
+	}
+	state.Or(activeState)
+	for num := state.NumSetBits(); num < minSynapses; num = state.NumSetBits() {
+		// TODO(tms): optimize.
+		indices := columnRand.Perm(state.Len())[num:minSynapses]
+		state.Set(indices...)
+	}
+	return NewSegmentUpdate(sIndex, sIndex == -1, state)
+}
+
+func (g *DistalSegmentGroup) AddUpdate(update *SegmentUpdate) {
+	g.updates = append(g.updates, update)
+}
+
+func (g DistalSegmentGroup) HasUpdates() bool {
+	return len(g.updates) > 0
+}
+
+func (g *DistalSegmentGroup) ApplyAll(positive bool) {
+	for _, u := range g.updates {
+		g.Apply(u, positive)
+	}
+	g.updates = g.updates[0:0]
+}
+
+func (g *DistalSegmentGroup) Apply(update *SegmentUpdate, positive bool) {
+	var s *DistalSegment
+	if update.pos == -1 {
+		s = &DistalSegment{
+			PermanenceMap: NewPermanenceMap(update.bitsToUpdate.Len()),
+			sequence:      update.sequence,
+		}
+		g.segments = append(g.segments, s)
+		update.bitsToUpdate.Foreach(func(i int) {
+			s.Set(i, INITIAL_PERMANENCE)
+		})
+	} else {
+		s = g.segments[update.pos]
+		if positive {
+			s.narrow(*update.bitsToUpdate)
+		} else {
+			s.weaken(*update.bitsToUpdate)
+			// TODO(tms): trim segments.
+		}
+	}
+	if htmLogger != nil {
+		htmLogger.Printf("\t\tAfter reinforcement (positive=%t) => %v", positive, *s.PermanenceMap)
 	}
 }

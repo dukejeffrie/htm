@@ -102,29 +102,23 @@ func (d *Drop) Step() (recognized int) {
 		return
 	}
 
-	fmt.Fprintf(d.Output, "\n%d) Input = %v", d.step, input)
+	recognized = 0
 	//input.Value.Print(16, d.Output)
 	d.region0.ConsumeInput(input.Value)
 	d.region1.ConsumeInput(d.region0.Output())
 	d.region3.ConsumeInput(d.region1.Output())
-	val := d.region3.Output().String()
-	if pat, ok := d.patterns[val]; ok {
-		if pat == input.Name {
-			fmt.Fprintf(d.Output, ", recognized as %s.", pat)
-			recognized = 1
-		} else {
-			fmt.Fprintf(d.Output, ", mislabeled as %s.", pat)
-			recognized = 0
-		}
-	} else {
+	fmt.Fprintf(d.Output, "\n%d) Input(%s) = %v", d.step, input.Name, input.Value)
+	if d.predicted.IsZero() {
 		recognized = -1
-		fmt.Fprintf(d.Output, ", new pattern\n")
-		d.region0.Print(d.Output)
-		d.region3.Print(d.Output)
-		if d.region3.Learning {
-			d.patterns[val] = input.Name
-		}
+		fmt.Fprintf(d.Output, ", new: %v", d.region3.ActiveState())
+	} else if d.predicted.Equals(d.region3.ActiveState()) {
+		fmt.Fprintf(d.Output, ", predicted: %v", *d.predicted)
+		recognized = 1
+	} else {
+		fmt.Fprintf(d.Output, ", missed (expected = %v, got: %v)", *d.predicted, d.region3.ActiveState())
+		recognized = 0
 	}
+	d.predicted = d.region3.PredictiveState().Clone()
 	return
 }
 
@@ -147,7 +141,7 @@ func TestDrop(t *testing.T) {
 		Output:  out,
 		t:       t}
 	drop.InitializeNetwork()
-	fmt.Printf("%v\n%v\n%v\n",
+	fmt.Printf("%+v\n%+v\n%+v\n",
 		drop.region0.RegionParameters,
 		drop.region1.RegionParameters,
 		drop.region3.RegionParameters)

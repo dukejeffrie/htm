@@ -69,6 +69,28 @@ func BenchmarkNarrowSynapses(b *testing.B) {
 	}
 }
 
+func TestWeakenSynapses(t *testing.T) {
+	pm := NewPermanenceMap(64)
+	pm.Reset(1, 10, 20)
+	pm.Set(30, CONNECTION_THRESHOLD+PERMANENCE_DEC)
+
+	input := NewBitset(64).Set(10, 30)
+	pm.weaken(*input)
+	if pm.Get(10) != INITIAL_PERMANENCE-PERMANENCE_DEC {
+		t.Errorf("Bad permanence value @%d after weaken: %v", 10, *pm)
+	}
+	if pm.Get(30) != CONNECTION_THRESHOLD {
+		t.Errorf("Bad permanence value @%d after weaken: %v", 30, *pm)
+	}
+	if !pm.Connected().IsSet(30) {
+		t.Errorf("Should be connected @30:", *pm)
+	}
+	pm.weaken(*input)
+	if pm.Connected().IsSet(30) {
+		t.Errorf("Should not be connected @30:", *pm)
+	}
+}
+
 func TestBroadenSynapses(t *testing.T) {
 	ds := NewDendriteSegment(64)
 	ds.Reset(1, 3, 5, 8, 13)
@@ -155,5 +177,48 @@ func TestCycleHistory(t *testing.T) {
 	}
 	if avg, ok := ch.Average(); !ok || avg != 0.1 {
 		t.Errorf("Should be %f average: %f, ok=%t, %v", 0.1, avg, ok, ch)
+	}
+}
+
+func TestDistalSegmentGroup(t *testing.T) {
+	group := NewDistalSegmentGroup()
+	v1 := NewBitset(64).Set(1, 10)
+	v2 := NewBitset(64).Set(2, 20)
+	u1 := group.CreateUpdate(-1, *v1, 2)
+	u2 := group.CreateUpdate(-1, *v2, 2)
+	group.AddUpdate(u1)
+	group.AddUpdate(u2)
+
+	active := NewBitset(64).Set(10)
+
+	if group.HasActiveSegment(*active, 1) {
+		t.Errorf("Test is broken, group should be empty. %v", *group)
+	}
+	group.ApplyAll(true)
+	if !group.HasActiveSegment(*active, 1) {
+		t.Errorf("Expected at least one active segment: %v", *group)
+	}
+	sIndex, sOverlap := group.ComputeActive(*active, 1, false)
+	if sIndex != 0 {
+		t.Errorf("Unexpected active segment. Expected: %d, but got: %d. %v", 0, sIndex, *group)
+	}
+	if sOverlap != 1 {
+		t.Errorf("Unexpected overlap. Expected: %d, but got: %d. %v", 1, sOverlap, *group)
+	}
+
+	// Disconnect bits 2 and 20 in segment @1.
+	group.segments[1].Set(2, PERMANENCE_MIN)
+	group.segments[1].Set(20, PERMANENCE_MIN)
+
+	// Make active state weakly better connected to @1 but strongly to @0.
+	active.Reset().Set(1, 2, 20)
+
+	sIndex, _ = group.ComputeActive(*active, 1, true)
+	if sIndex != 1 {
+		t.Errorf("Unexpected active segment. Expected: %d, but got: %d. %v", 0, sIndex, *group)
+	}
+	sIndex, _ = group.ComputeActive(*active, 1, false)
+	if sIndex != 0 {
+		t.Errorf("Unexpected active segment. Expected: %d, but got: %d. %v", 0, sIndex, *group)
 	}
 }

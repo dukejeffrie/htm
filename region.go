@@ -2,9 +2,28 @@
 
 package htm
 
-import "fmt"
+import "bufio"
 import "container/heap"
+import "flag"
+import "fmt"
 import "io"
+import "log"
+import "os"
+
+var htmLogger *log.Logger
+var htmLoggerEnabled = flag.Bool(
+	"enable_htm_trace_log", false,
+	"whether to enable trace logging of the htm execution.")
+
+func initLogger() {
+	if *htmLoggerEnabled {
+		if htmLogger == nil {
+			htmLogger = log.New(os.Stderr, "htm) ", 0)
+		}
+	} else {
+		htmLogger = nil
+	}
+}
 
 type ScoredElement struct {
 	index int
@@ -62,19 +81,32 @@ type RegionParameters struct {
 
 type Region struct {
 	RegionParameters
-	columns    []*Column
-	output     *Bitset
-	learnState *Bitset
-	scratch    Scratch
+	columns              []*Column
+	output               *Bitset
+	active               *Bitset
+	lastActive           *Bitset
+	predictive           *Bitset
+	lastPredictive       *Bitset
+	learnActiveState     *Bitset
+	learnActiveStateLast *Bitset
+	learnPredictiveState *Bitset
+	scratch              Scratch
 }
 
 // Creates a new named region with the given parameters.
 func NewRegion(params RegionParameters) *Region {
+	initLogger()
 	result := &Region{
-		RegionParameters: params,
-		columns:          make([]*Column, params.Width),
-		output:           NewBitset(params.Width * params.Height),
-		learnState:       NewBitset(params.Width * params.Height),
+		RegionParameters:     params,
+		columns:              make([]*Column, params.Width),
+		output:               NewBitset(params.Width * params.Height),
+		active:               NewBitset(params.Width * params.Height),
+		lastActive:           NewBitset(params.Width * params.Height),
+		predictive:           NewBitset(params.Width * params.Height),
+		lastPredictive:       NewBitset(params.Width * params.Height),
+		learnActiveState:     NewBitset(params.Width * params.Height),
+		learnActiveStateLast: NewBitset(params.Width * params.Height),
+		learnPredictiveState: NewBitset(params.Width * params.Height),
 		scratch: Scratch{
 			input:  make([]int, params.InputLength),
 			scores: make([]ScoredElement, 0, params.MaximumFiringColumns+1),
@@ -82,6 +114,10 @@ func NewRegion(params RegionParameters) *Region {
 	}
 	for i := 0; i < params.Width; i++ {
 		result.columns[i] = NewColumn(params.InputLength, params.Height)
+		result.columns[i].Index = i
+	}
+	if htmLogger != nil {
+		htmLogger.Printf("Region created: %+v", params)
 	}
 	return result
 }
@@ -92,6 +128,26 @@ func (l Region) Height() int {
 
 func (l Region) Width() int {
 	return l.RegionParameters.Width
+}
+
+func (l Region) Column(i int) Column {
+	return *l.columns[i]
+}
+
+func (l Region) ActiveState() Bitset {
+	return *l.active
+}
+
+func (l Region) PredictiveState() Bitset {
+	return *l.predictive
+}
+
+func (l Region) LearningActiveState() Bitset {
+	return *l.learnActiveState
+}
+
+func (l Region) LearningPredictiveState() Bitset {
+	return *l.learnPredictiveState
 }
 
 func (l *Region) RandomizeColumns(w int) {
@@ -111,7 +167,44 @@ func (l *Region) ResetColumnSynapses(i int, indices ...int) {
 	col.SetBoost(columnRand.Float32() * 0.00001)
 }
 
+func (l *Region) SensedInput() Bitset {
+	dest := NewBitset(l.InputLength)
+	for _, col := range l.columns {
+		if !col.Active().IsZero() {
+			dest.Or(col.Connected())
+		}
+	}
+	return *dest
+}
+
+func (l *Region) FeedBack(output Bitset) *Bitset {
+	dest := NewBitset(l.InputLength)
+	output.Foreach(func(cellId int) {
+		col := l.columns[cellId/l.Height()]
+		cell := cellId % l.Height()
+		if !col.Distal(cell).HasActiveSegment(output, l.MinimumInputOverlap) {
+			// Not a predicted cell, must be active from fast-forward.
+			dest.Or(col.Connected())
+		}
+	})
+	return dest
+}
+
+func (l *Region) PredictedInput() Bitset {
+	dest := NewBitset(l.InputLength)
+	for _, col := range l.columns {
+		if !col.Predictive().IsZero() {
+			dest.Or(col.Connected())
+		}
+	}
+	return *dest
+}
+
 func (l *Region) ConsumeInput(input Bitset) {
+	if htmLogger != nil {
+		htmLogger.Printf("\n============ %s Consume(learning=%t, input=%v)",
+			l.Name, l.Learning, input)
+	}
 	l.scratch.scores = l.scratch.scores[0:0]
 	for i, c := range l.columns {
 		c.active.Reset()
@@ -124,12 +217,33 @@ func (l *Region) ConsumeInput(input Bitset) {
 			}
 		}
 	}
-	l.output.Reset()
+
+	// 1) For each active column, check for cells that are in a predictive state and
+	// activate them. If no cells are in a predictive state, activate all the cells in
+	// the column (burst).
+	l.lastActive.ResetTo(*l.active)
+	l.active.Reset()
 	for _, el := range l.scratch.scores {
 		col := l.columns[el.index]
 		col.Activate()
-		l.output.SetFromBitsetAt(col.Active(), el.index*col.Height())
+		l.active.SetFromBitsetAt(col.Active(), el.index*col.Height())
 	}
+
+	// 2) Cells with active dendrite segments are put in the predictive state.
+	l.lastPredictive.ResetTo(*l.predictive)
+	l.predictive.Reset()
+	for _, col := range l.columns {
+		col.Predict(*l.active, l.MinimumInputOverlap)
+		l.predictive.SetFromBitsetAt(col.Predictive(), col.Index*col.Height())
+	}
+	// The output for the next level is the union of active and predicted cells.
+	l.output.ResetTo(*l.active)
+	l.output.Or(*l.predictive)
+	if htmLogger != nil {
+		htmLogger.Printf("Inference finished.\n\tOutput(t): %v\n\tActive(t): %v\n\tPredictive(t):%v\n",
+			*l.output, *l.active, *l.predictive)
+	}
+
 	if l.Learning {
 		l.Learn(input)
 	}
@@ -140,24 +254,95 @@ func (l *Region) Output() Bitset {
 }
 
 func (l *Region) Learn(input Bitset) {
+	// Temporal pooler learning. Learn states are a subsample of the full state, with
+	// hand-picked bits comprised of one cell per column.
+
+	// 3) process segment updates (yes, we do it before 1 and 2).
+	for _, col := range l.columns {
+		col.AdaptSegments()
+	}
+
+	// 1) Learn that the last active state predicts this active state.
+	if htmLogger != nil {
+		htmLogger.Printf("Learning actual sequences...\n\tlActive(t-1): %v\n\tlPredictive(t-1): %v\n",
+			*l.learnActiveState, *l.learnPredictiveState)
+	}
+
+	l.learnActiveStateLast.ResetTo(*l.learnActiveState)
+	l.learnActiveState.Reset()
+	for _, el := range l.scratch.scores {
+		col := l.columns[el.index]
+		if !col.ConfirmPrediction(*l.learnPredictiveState) {
+			col.LearnSequence(*l.learnActiveStateLast)
+		}
+		l.learnActiveState.Set(col.LearningCellId())
+	}
+	// 2) Select one cell per column to learn the transition from the current input to
+	// the next input
+	//l.learnActiveState.ResetTo(*l.learnPredictiveState)
+	//l.learnActiveState.And(l.active)
+	if htmLogger != nil {
+		htmLogger.Printf("Learning predictions...\n\tActive(t): %v\n\tlActive(t): %v\n",
+			*l.active, *l.learnActiveState)
+	}
+	l.learnPredictiveState.Reset()
+	for _, col := range l.columns {
+		if col.LearnPrediction(*l.learnActiveState, l.MinimumInputOverlap) {
+			l.learnPredictiveState.Set(col.LearningCellId())
+		}
+	}
+
+	if htmLogger != nil {
+		htmLogger.Printf("Sequence learner finished.\n\tlPredictive(t): %v",
+			*l.learnPredictiveState)
+	}
+
+	// Spatial pooler learning.
 	for _, col := range l.columns {
 		col.LearnFromInput(input, l.MinimumInputOverlap)
 	}
 }
 
-func (l Region) Print(writer io.Writer) {
-	fmt.Fprintf(writer, "\n=== %s (learning: %t) ===\n", l.Name, l.Learning)
-	for i := 8; i < len(l.columns) && i <= 80; i += 8 {
-		fmt.Fprintf(writer, "%8d", i)
-	}
-	fmt.Fprintln(writer)
-	rem := 80
-	for _, c := range l.columns {
-		c.Print(rem, writer)
-		rem -= c.Height()
-		if rem <= 0 {
-			rem = 80
+func (l Region) ToRune(cellId int) (r rune) {
+	if l.active.IsSet(cellId) {
+		if l.lastPredictive.IsSet(cellId) {
+			r = 'v'
+		} else {
+			r = '!'
 		}
+	} else if l.lastPredictive.IsSet(cellId) {
+		r = 'o'
+	} else {
+		r = '-'
 	}
-	fmt.Fprintln(writer)
+	return
+}
+
+func (l Region) Print(w io.Writer) error {
+	writer := bufio.NewWriter(w)
+	fmt.Fprintf(writer, "\n=== %s (learning: %t) ===\n", l.Name, l.Learning)
+	line := 0
+	rS := 20
+	rL := 80
+	// TODO(tms): dynamic values for rL and rS
+
+	tabFormat := fmt.Sprintf("%%-%dd ", rS)
+	for j := 0; j < rL; j += rS {
+		fmt.Fprintf(writer, tabFormat, (line*rL)+j)
+	}
+	for i := 0; i < l.Width()*l.Height(); i++ {
+		if i%rL == 0 {
+			writer.WriteRune('\n')
+			if line > 0 {
+				fmt.Fprintf(writer, tabFormat, line*rL)
+				writer.WriteRune('\n')
+			}
+			line++
+		} else if i%rS == 0 {
+			writer.WriteRune(' ')
+		}
+		writer.WriteRune(l.ToRune(i))
+	}
+	writer.WriteRune('\n')
+	return writer.Flush()
 }
