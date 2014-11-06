@@ -83,11 +83,11 @@ func TestWeakenSynapses(t *testing.T) {
 		t.Errorf("Bad permanence value @%d after weaken: %v", 30, *pm)
 	}
 	if !pm.Connected().IsSet(30) {
-		t.Errorf("Should be connected @30:", *pm)
+		t.Error("Should be connected @30:", *pm)
 	}
 	pm.weaken(*input)
 	if pm.Connected().IsSet(30) {
-		t.Errorf("Should not be connected @30:", *pm)
+		t.Error("Should not be connected @30:", *pm)
 	}
 }
 
@@ -114,7 +114,7 @@ func TestBroadenSynapses(t *testing.T) {
 		t.Errorf("Permanence scores must be uniform: %v", ds.permanence)
 	}
 	if ds.permanence[8] != PERMANENCE_MIN || ds.permanence[22] != PERMANENCE_MIN {
-		t.Errorf("Permanence for broadened synapse should be %d: %v", PERMANENCE_MIN, ds.permanence)
+		t.Errorf("Permanence for broadened synapse should be %f: %v", PERMANENCE_MIN, ds.permanence)
 	}
 }
 

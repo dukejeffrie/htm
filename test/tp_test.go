@@ -8,8 +8,16 @@ import "math/rand"
 import "testing"
 import "github.com/dukejeffrie/htm"
 
+type LoggerInterface interface {
+	Errorf(format string, args ...interface{})
+	Failed() bool
+	FailNow()
+	Log(args ...interface{})
+	Logf(format string, args ...interface{})
+}
+
 type TpTest struct {
-	*testing.T
+	LoggerInterface
 	inputA *htm.Bitset
 	inputB *htm.Bitset
 
@@ -21,7 +29,7 @@ type TpTest struct {
 	Verify     bool
 }
 
-func NewTpTest(t *testing.T) *TpTest {
+func NewTpTest(t LoggerInterface) *TpTest {
 	params := htm.RegionParameters{
 		Name:                 "0-tp",
 		Learning:             true,
@@ -32,15 +40,15 @@ func NewTpTest(t *testing.T) *TpTest {
 		MaximumFiringColumns: 2,
 	}
 	result := &TpTest{
-		T:          t,
-		step:       0,
-		inputA:     htm.NewBitset(64),
-		inputB:     htm.NewBitset(64),
-		layer0:     htm.NewRegion(params),
-		expected0:  htm.NewBitset(params.Width * params.Height),
-		active0:    htm.NewBitset(params.Width * params.Height),
-		predicted0: htm.NewBitset(params.Width * params.Height),
-		Verify:     true,
+		LoggerInterface: t,
+		step:            0,
+		inputA:          htm.NewBitset(64),
+		inputB:          htm.NewBitset(64),
+		layer0:          htm.NewRegion(params),
+		expected0:       htm.NewBitset(params.Width * params.Height),
+		active0:         htm.NewBitset(params.Width * params.Height),
+		predicted0:      htm.NewBitset(params.Width * params.Height),
+		Verify:          true,
 	}
 
 	odds := make([]int, 32)
@@ -139,6 +147,17 @@ func TestTp_LearnAAB(t *testing.T) {
 	// After ...,A,A comes A or B.
 	test.Step(*test.inputA)
 	test.checkPredictedInput(*aOrB)
+}
+
+func BenchmarkTp_AAB(b *testing.B) {
+	test := NewTpTest(b)
+	test.Verify = false
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		test.Step(*test.inputA)
+		test.Step(*test.inputA)
+		test.Step(*test.inputB)
+	}
 }
 
 func TestTp_AAxB(t *testing.T) {

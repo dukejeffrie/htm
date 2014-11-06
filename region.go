@@ -55,11 +55,6 @@ func (t *TopN) Pop() interface{} {
 	return el
 }
 
-type Scratch struct {
-	input  []int
-	scores TopN
-}
-
 // Parameters to describe a region.
 type RegionParameters struct {
 	// The name of the region, used for debugging.
@@ -90,7 +85,7 @@ type Region struct {
 	learnActiveState     *Bitset
 	learnActiveStateLast *Bitset
 	learnPredictiveState *Bitset
-	scratch              Scratch
+	scores TopN
 }
 
 // Creates a new named region with the given parameters.
@@ -107,10 +102,7 @@ func NewRegion(params RegionParameters) *Region {
 		learnActiveState:     NewBitset(params.Width * params.Height),
 		learnActiveStateLast: NewBitset(params.Width * params.Height),
 		learnPredictiveState: NewBitset(params.Width * params.Height),
-		scratch: Scratch{
-			input:  make([]int, params.InputLength),
-			scores: make([]ScoredElement, 0, params.MaximumFiringColumns+1),
-		},
+		scores: make([]ScoredElement, 0, params.MaximumFiringColumns+1),
 	}
 	for i := 0; i < params.Width; i++ {
 		result.columns[i] = NewColumn(params.InputLength, params.Height)
@@ -205,15 +197,15 @@ func (l *Region) ConsumeInput(input Bitset) {
 		htmLogger.Printf("\n============ %s Consume(learning=%t, input=%v)",
 			l.Name, l.Learning, input)
 	}
-	l.scratch.scores = l.scratch.scores[0:0]
+	l.scores = l.scores[0:0]
 	for i, c := range l.columns {
 		c.active.Reset()
 		overlapScore := c.Connected().Overlap(input)
 		if overlapScore >= l.MinimumInputOverlap {
 			score := float32(overlapScore) + c.Boost()
-			heap.Push(&l.scratch.scores, ScoredElement{i, score})
-			if l.scratch.scores.Len() > l.MaximumFiringColumns {
-				heap.Pop(&l.scratch.scores)
+			heap.Push(&l.scores, ScoredElement{i, score})
+			if l.scores.Len() > l.MaximumFiringColumns {
+				heap.Pop(&l.scores)
 			}
 		}
 	}
@@ -223,7 +215,7 @@ func (l *Region) ConsumeInput(input Bitset) {
 	// the column (burst).
 	l.lastActive.ResetTo(*l.active)
 	l.active.Reset()
-	for _, el := range l.scratch.scores {
+	for _, el := range l.scores {
 		col := l.columns[el.index]
 		col.Activate()
 		l.active.SetFromBitsetAt(col.Active(), el.index*col.Height())
@@ -270,7 +262,7 @@ func (l *Region) Learn(input Bitset) {
 
 	l.learnActiveStateLast.ResetTo(*l.learnActiveState)
 	l.learnActiveState.Reset()
-	for _, el := range l.scratch.scores {
+	for _, el := range l.scores {
 		col := l.columns[el.index]
 		if !col.ConfirmPrediction(*l.learnPredictiveState) {
 			col.LearnSequence(*l.learnActiveStateLast)
@@ -279,8 +271,6 @@ func (l *Region) Learn(input Bitset) {
 	}
 	// 2) Select one cell per column to learn the transition from the current input to
 	// the next input
-	//l.learnActiveState.ResetTo(*l.learnPredictiveState)
-	//l.learnActiveState.And(l.active)
 	if htmLogger != nil {
 		htmLogger.Printf("Learning predictions...\n\tActive(t): %v\n\tlActive(t): %v\n",
 			*l.active, *l.learnActiveState)

@@ -101,16 +101,16 @@ func TestConsumeInput(t *testing.T) {
 	// Let's store all the top cells connections into the input bit, so we get them again the second time around.
 	nextInput := NewBitset(64)
 
-	for _, el := range l.scratch.scores {
+	for _, el := range l.scores {
 		col := l.columns[el.index]
 		nextInput.Or(col.Connected())
 	}
-	lastScores := make([]ScoredElement, l.scratch.scores.Len())
-	copy(lastScores, l.scratch.scores)
+	lastScores := make([]ScoredElement, l.scores.Len())
+	copy(lastScores, l.scores)
 
 	l.ConsumeInput(*NewBitset(64))
-	if l.scratch.scores.Len() != 0 {
-		t.Errorf("Leftovers in scratch: %v", l.scratch)
+	if l.scores.Len() != 0 {
+		t.Errorf("Leftovers in scores: %v", l.scores)
 	}
 	output2 := l.Output()
 	if output2.Len() != 50*4 {
@@ -123,7 +123,7 @@ func TestConsumeInput(t *testing.T) {
 	l.ConsumeInput(*nextInput)
 	for _, old := range lastScores {
 		found := false
-		for _, el := range l.scratch.scores {
+		for _, el := range l.scores {
 			if old.index == el.index {
 				found = true
 				break
@@ -131,7 +131,7 @@ func TestConsumeInput(t *testing.T) {
 		}
 		if !found {
 			t.Errorf("Column %d was expected, but is missing!\n%v",
-				old.index, l.scratch.scores)
+				old.index, l.scores)
 		}
 	}
 
