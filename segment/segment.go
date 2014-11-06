@@ -10,48 +10,14 @@ import "math/rand"
 var segmentSource = rand.NewSource(304050)
 var segmentRand = rand.New(segmentSource)
 
-type CycleHistory struct {
-	events *data.Bitset
-	cycle  int
-}
-
-func NewCycleHistory(length int) *CycleHistory {
-	result := &CycleHistory{
-		events: data.NewBitset(length),
-		cycle:  -length,
-	}
-	return result
-}
-
-func (ch *CycleHistory) Record(event bool) {
-	at := ch.cycle
-	if at < 0 {
-		at = ch.events.Len() + at
-	}
-	if event {
-		ch.events.Set(at)
-	} else {
-		ch.events.Unset(at)
-	}
-	ch.cycle = (ch.cycle + 1) % ch.events.Len()
-}
-
-func (ch CycleHistory) Average() (float32, bool) {
-	l := ch.events.Len()
-	if ch.cycle < 0 {
-		l += ch.cycle
-	}
-	return float32(ch.events.NumSetBits()) / float32(l), l != 0
-}
-
 type DendriteSegment struct {
 	*PermanenceMap
 	// Minimum firing rate for this segment.
 	MinActivityRatio float32
 	Boost            float32
 
-	overlapHistory    *CycleHistory
-	activationHistory *CycleHistory
+	overlapHistory    *data.CycleHistory
+	activationHistory *data.CycleHistory
 }
 
 func (ds DendriteSegment) String() string {
@@ -66,8 +32,8 @@ func NewDendriteSegment(numBits int) *DendriteSegment {
 		PermanenceMap:     NewPermanenceMap(numBits),
 		MinActivityRatio:  0.02,
 		Boost:             0,
-		overlapHistory:    NewCycleHistory(100),
-		activationHistory: NewCycleHistory(100),
+		overlapHistory:    data.NewCycleHistory(100),
+		activationHistory: data.NewCycleHistory(100),
 	}
 	return ds
 }
