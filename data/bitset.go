@@ -68,16 +68,29 @@ func (b Bitset) Overlap(other Bitset) int {
 	return count
 }
 
-func (b Bitset) NumSetBits() int {
-	// This algorithm behaves well only when the number of set bits is small.
-	count := 0
+func (b Bitset) NumSetBits() (count int) {
+	// This algorithm behaves well only when the number of set bits is small. If
+	// You are counting the non-zero bits in a dense bitset, use DenseCount()
+	// below.
 	for _, el := range b.binary {
 		for ; el != 0; count++ {
 			// Clear the least significant bit.
 			el &= el - 1
 		}
 	}
-	return count
+	return
+}
+
+func (b Bitset) DenseCount() (count int) {
+	// Only fast when the bitset is rather dense. Prefer NumSetBits() above in
+	// most cases.
+	for _, el := range b.binary {
+		el -= (el >> 1) & 0x5555555555555555
+		el = (el & 0x3333333333333333) + ((el >> 2) & 0x3333333333333333)
+		el = (((el + (el >> 4)) & 0xf0f0f0f0f0f0f0f) * 0x101010101010101) >> 56
+		count += int(el)
+	}
+	return
 }
 
 func (b Bitset) IsZero() bool {

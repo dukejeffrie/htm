@@ -77,6 +77,7 @@ func TestSetAndReset(t *testing.T) {
 	b.Set(11, 12)
 	ExpectEquals(t, "bit 127", true, b.IsSet(127))
 	ExpectEquals(t, "num bits", 3, b.NumSetBits())
+	ExpectEquals(t, "num bits", 3, b.DenseCount())
 	if b.AllSet(0, 11, 12) {
 		t.Errorf("Bit 0 should not be set: %v", *b)
 	}
@@ -93,6 +94,7 @@ func TestSetAndReset(t *testing.T) {
 
 	b.Set(222, 444, 888, 1023, 1024, 1331, 2047)
 	ExpectEquals(t, "num bits", 7, b.NumSetBits())
+	ExpectEquals(t, "num bits", 7, b.DenseCount())
 	b.Set(111)
 	ExpectEquals(t, "bit 111", true, b.IsSet(111))
 	b.Unset(111)
@@ -226,6 +228,7 @@ func TestSetRange(t *testing.T) {
 	b.SetRange(8, 154)
 
 	ExpectEquals(t, "num bits", 154-8, b.NumSetBits())
+	ExpectEquals(t, "num bits", 154-8, b.DenseCount())
 	for i := 8; i < 154; i++ {
 		ExpectEquals(t, fmt.Sprintf("bit %d", i), true, b.IsSet(i))
 	}
@@ -461,7 +464,7 @@ func TestOverlapBitset(t *testing.T) {
 	ExpectEquals(t, "alpha & beta", 4, alpha.Overlap(*beta))
 }
 
-func BenchmarkNumSetBits_Few(b *testing.B) {
+func BenchmarkCountNumSetBits_Few(b *testing.B) {
 	all := NewBitset(2048).Set(0, 63, 127, 128, 255, 256, 383, 384, 400, 420, 500, 600, 700, 800, 900, 1000, 1100, 1200, 2047)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -469,7 +472,7 @@ func BenchmarkNumSetBits_Few(b *testing.B) {
 	}
 }
 
-func BenchmarkNumSetBits_Half(b *testing.B) {
+func BenchmarkCountNumSetBits_Half(b *testing.B) {
 	all := NewBitset(2048)
 	for i := 0; i < 1024; i++ {
 		all.Set(i * 2)
@@ -480,11 +483,39 @@ func BenchmarkNumSetBits_Half(b *testing.B) {
 	}
 }
 
-func BenchmarkNumSetBits_All(b *testing.B) {
+func BenchmarkCountNumSetBits_All(b *testing.B) {
 	all := NewBitset(2048)
 	all.SetRange(0, 2048)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		all.NumSetBits()
+	}
+}
+
+func BenchmarkDenseCount_Few(b *testing.B) {
+	all := NewBitset(2048).Set(0, 63, 127, 128, 255, 256, 383, 384, 400, 420, 500, 600, 700, 800, 900, 1000, 1100, 1200, 2047)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		all.DenseCount()
+	}
+}
+
+func BenchmarkDenseCount_Half(b *testing.B) {
+	all := NewBitset(2048)
+	for i := 0; i < 1024; i++ {
+		all.Set(i * 2)
+	}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		all.DenseCount()
+	}
+}
+
+func BenchmarkDenseCount_All(b *testing.B) {
+	all := NewBitset(2048)
+	all.SetRange(0, 2048)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		all.DenseCount()
 	}
 }
