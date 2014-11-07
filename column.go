@@ -93,7 +93,6 @@ func (c *Column) Predict(activeState data.Bitset, minOverlap int) {
 	c.predictive.Reset()
 	for i := 0; i < c.Height(); i++ {
 		if c.distal[i].HasActiveSegment(activeState, minOverlap) {
-			// TODO(tms): if s.sequence == true
 			c.predictive.Set(i)
 		}
 	}

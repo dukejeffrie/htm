@@ -77,23 +77,20 @@ func (ds *DendriteSegment) broaden(input data.Bitset, minOverlap int) (overlapCo
 
 type DistalSegment struct {
 	*PermanenceMap
-	sequence bool
 }
 
 type SegmentUpdate struct {
 	pos          int
-	sequence     bool
 	bitsToUpdate *data.Bitset
 }
 
 func (u SegmentUpdate) String() string {
-	return fmt.Sprintf("@%d(seq=%t)%v", u.pos, u.sequence, *u.bitsToUpdate)
+	return fmt.Sprintf("@%d%v", u.pos, *u.bitsToUpdate)
 }
 
-func NewSegmentUpdate(pos int, sequence bool, state *data.Bitset) *SegmentUpdate {
+func NewSegmentUpdate(pos int, state *data.Bitset) *SegmentUpdate {
 	result := &SegmentUpdate{
 		pos:          pos,
-		sequence:     sequence,
 		bitsToUpdate: state,
 	}
 	return result
@@ -123,15 +120,11 @@ func NewDistalSegmentGroup() *DistalSegmentGroup {
 func (g DistalSegmentGroup) ComputeActive(activeState data.Bitset, minOverlap int, weak bool) (resultIndex, resultOverlap int) {
 	resultIndex = -1
 	resultOverlap = minOverlap - 1
-	hasSequence := false
 	for i, s := range g.segments {
 		if overlap := s.Overlap(activeState, weak); overlap > resultOverlap {
-			if overlap > resultOverlap && (!hasSequence || s.sequence) {
+			if overlap > resultOverlap {
 				resultIndex = i
 				resultOverlap = overlap
-				if s.sequence {
-					hasSequence = true
-				}
 			}
 		}
 	}
@@ -163,7 +156,7 @@ func (g *DistalSegmentGroup) CreateUpdate(sIndex int, activeState data.Bitset, m
 		indices := segmentRand.Perm(state.Len())[num:minSynapses]
 		state.Set(indices...)
 	}
-	return NewSegmentUpdate(sIndex, sIndex == -1, state)
+	return NewSegmentUpdate(sIndex, state)
 }
 
 func (g *DistalSegmentGroup) AddUpdate(update *SegmentUpdate) {
@@ -186,7 +179,6 @@ func (g *DistalSegmentGroup) Apply(update *SegmentUpdate, positive bool) {
 	if update.pos == -1 {
 		s = &DistalSegment{
 			PermanenceMap: PermanenceMapFromBits(*update.bitsToUpdate),
-			sequence:      update.sequence,
 		}
 		g.segments = append(g.segments, s)
 	} else {
