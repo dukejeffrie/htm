@@ -148,6 +148,36 @@ func TestBitsetAnd_DifferentLength(t *testing.T) {
 	b.And(*b2)
 }
 
+func TestBitsetAndNot(t *testing.T) {
+	b := NewBitset(2048).Set(20, 200, 2000)
+	b2 := b.Clone()
+	b.AndNot(*b)
+	if !b.IsZero() {
+		t.Errorf("Failed b &^ b == 0. Expected empty, but got: %v", *b)
+	}
+	b.ResetTo(*b2)
+	b3 := b2.Clone().Unset(20)
+	b.AndNot(*b3)
+
+	if !b.Equals(*NewBitset(b.Len()).Set(20)) {
+		t.Errorf("Failed (b|[1,2,3]) & b == b. Expected %v, but got: %v", *b2, *b)
+	}
+}
+
+func TestBitsetAndNot_DifferentLength(t *testing.T) {
+	defer func() {
+		err := recover()
+		if err == nil {
+			t.Error("Should have failed, but didn't.")
+		} else if !strings.Contains(fmt.Sprint(err), "Cannot AndNot") {
+			t.Error("Should panic with the AndNot message, but got: %v", err)
+		}
+	}()
+	b := NewBitset(100)
+	b2 := NewBitset(101)
+	b.AndNot(*b2)
+}
+
 func TestBitsetOr(t *testing.T) {
 	b := NewBitset(2048).Set(20, 200, 2000)
 	b2 := b.Clone()

@@ -131,12 +131,13 @@ func (b *Bitset) SetRange(start, end int) {
 	}
 }
 
-func (b *Bitset) Unset(indices ...int) {
+func (b *Bitset) Unset(indices ...int) *Bitset {
 	for _, v := range indices {
 		if v >= 0 && v < b.length {
 			b.binary[v/64] &= ^(1 << uint64(v%64))
 		}
 	}
+	return b
 }
 
 func (b Bitset) String() string {
@@ -188,6 +189,16 @@ func (b *Bitset) And(other Bitset) {
 	}
 	for i, v := range other.binary {
 		b.binary[i] &= v
+	}
+}
+
+func (b *Bitset) AndNot(other Bitset) {
+	if b.length != other.length {
+		panic(fmt.Errorf(
+			"Cannot AndNot bitsets of different length (%d != %d)", b.length, other.length))
+	}
+	for i, v := range other.binary {
+		b.binary[i] &= ^v
 	}
 }
 
