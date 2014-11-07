@@ -4,27 +4,10 @@ package htm
 
 import "bufio"
 import "container/heap"
-import "flag"
 import "fmt"
 import "github.com/dukejeffrie/htm/data"
+import "github.com/dukejeffrie/htm/log"
 import "io"
-import "log"
-import "os"
-
-var htmLogger *log.Logger
-var htmLoggerEnabled = flag.Bool(
-	"enable_htm_trace_log", false,
-	"whether to enable trace logging of the htm execution.")
-
-func initLogger() {
-	if *htmLoggerEnabled {
-		if htmLogger == nil {
-			htmLogger = log.New(os.Stderr, "htm) ", 0)
-		}
-	} else {
-		htmLogger = nil
-	}
-}
 
 type ScoredElement struct {
 	index int
@@ -91,7 +74,6 @@ type Region struct {
 
 // Creates a new named region with the given parameters.
 func NewRegion(params RegionParameters) *Region {
-	initLogger()
 	result := &Region{
 		RegionParameters:     params,
 		columns:              make([]*Column, params.Width),
@@ -109,9 +91,7 @@ func NewRegion(params RegionParameters) *Region {
 		result.columns[i] = NewColumn(params.InputLength, params.Height)
 		result.columns[i].Index = i
 	}
-	if htmLogger != nil {
-		htmLogger.Printf("Region created: %+v", params)
-	}
+	log.HtmLogger.Printf("Region created: %+v", params)
 	return result
 }
 
@@ -194,10 +174,8 @@ func (l *Region) PredictedInput() data.Bitset {
 }
 
 func (l *Region) ConsumeInput(input data.Bitset) {
-	if htmLogger != nil {
-		htmLogger.Printf("\n============ %s Consume(learning=%t, input=%v)",
-			l.Name, l.Learning, input)
-	}
+	log.HtmLogger.Printf("\n============ %s Consume(learning=%t, input=%v)",
+		l.Name, l.Learning, input)
 	l.scores = l.scores[0:0]
 	for i, c := range l.columns {
 		c.active.Reset()
@@ -232,10 +210,8 @@ func (l *Region) ConsumeInput(input data.Bitset) {
 	// The output for the next level is the union of active and predicted cells.
 	l.output.ResetTo(*l.active)
 	l.output.Or(*l.predictive)
-	if htmLogger != nil {
-		htmLogger.Printf("Inference finished.\n\tOutput(t): %v\n\tActive(t): %v\n\tPredictive(t):%v\n",
-			*l.output, *l.active, *l.predictive)
-	}
+	log.HtmLogger.Printf("Inference finished.\n\tOutput(t): %v\n\tActive(t): %v\n\tPredictive(t):%v\n",
+		*l.output, *l.active, *l.predictive)
 
 	if l.Learning {
 		l.Learn(input)
@@ -256,10 +232,8 @@ func (l *Region) Learn(input data.Bitset) {
 	}
 
 	// 1) Learn that the last active state predicts this active state.
-	if htmLogger != nil {
-		htmLogger.Printf("Learning actual sequences...\n\tlActive(t-1): %v\n\tlPredictive(t-1): %v\n",
-			*l.learnActiveState, *l.learnPredictiveState)
-	}
+	log.HtmLogger.Printf("Learning actual sequences...\n\tlActive(t-1): %v\n\tlPredictive(t-1): %v\n",
+		*l.learnActiveState, *l.learnPredictiveState)
 
 	l.learnActiveStateLast.ResetTo(*l.learnActiveState)
 	l.learnActiveState.Reset()
@@ -272,10 +246,8 @@ func (l *Region) Learn(input data.Bitset) {
 	}
 	// 2) Select one cell per column to learn the transition from the current input to
 	// the next input
-	if htmLogger != nil {
-		htmLogger.Printf("Learning predictions...\n\tActive(t): %v\n\tlActive(t): %v\n",
-			*l.active, *l.learnActiveState)
-	}
+	log.HtmLogger.Printf("Learning predictions...\n\tActive(t): %v\n\tlActive(t): %v\n",
+		*l.active, *l.learnActiveState)
 	l.learnPredictiveState.Reset()
 	for _, col := range l.columns {
 		if col.LearnPrediction(*l.learnActiveState, l.MinimumInputOverlap) {
@@ -283,10 +255,8 @@ func (l *Region) Learn(input data.Bitset) {
 		}
 	}
 
-	if htmLogger != nil {
-		htmLogger.Printf("Sequence learner finished.\n\tlPredictive(t): %v",
-			*l.learnPredictiveState)
-	}
+	log.HtmLogger.Printf("Sequence learner finished.\n\tlPredictive(t): %v",
+		*l.learnPredictiveState)
 
 	// Spatial pooler learning.
 	for _, col := range l.columns {

@@ -4,6 +4,7 @@ package test
 
 import "github.com/dukejeffrie/htm"
 import "github.com/dukejeffrie/htm/data"
+import "github.com/dukejeffrie/htm/log"
 
 import "fmt"
 import "math/rand"
@@ -82,7 +83,7 @@ func (d *Drop) SetLearning(learning bool) {
 	d.region1.Learning = false
 	//d.region2.Learning = false
 	d.region3.Learning = false
-	fmt.Fprintf(d.Output, "\nLearning = %t\n", learning)
+	log.HtmLogger.Print("Learning = false")
 }
 
 func (d *Drop) AddNoise() {
@@ -124,6 +125,7 @@ func (d *Drop) Step() (recognized int) {
 }
 
 func TestDrop(t *testing.T) {
+	log.HtmLogger.SetEnabled(true)
 	dec, err := htm.NewScalarDecoder(64, 2, 0, 12000)
 	if err != nil {
 		t.Error(err)

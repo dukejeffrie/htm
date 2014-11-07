@@ -5,6 +5,7 @@ package htm
 import "fmt"
 import "math/rand"
 import "github.com/dukejeffrie/htm/data"
+import "github.com/dukejeffrie/htm/log"
 import "github.com/dukejeffrie/htm/segment"
 
 var columnSource = rand.NewSource(1979)
@@ -114,10 +115,10 @@ func (c Column) FindBestSegment(state data.Bitset, minOverlap int, weak bool) (b
 			}
 		}
 	}
-	if htmLogger != nil {
+	if log.HtmLogger.Enabled() {
 		if bestSegment >= 0 {
 			s := c.distal[bestCell].Segment(bestSegment)
-			htmLogger.Printf("\t\tFind best segment for column=%d, state=%v, minOverlap=%d, weak=%t: (%d, %d)=%04d <= %v (overlap=%d)",
+			log.HtmLogger.Printf("\t\tFind best segment for column=%d, state=%v, minOverlap=%d, weak=%t: (%d, %d)=%04d <= %v (overlap=%d)",
 				c.Index, state, minOverlap, weak, c.Index, bestCell, c.CellId(bestCell),
 				s.Connected(), bestOverlap)
 		}
@@ -138,8 +139,9 @@ func (c Column) CellId(i int) int {
 
 func (c *Column) AdaptSegments() {
 	if c.learning >= 0 {
-		if htmLogger != nil {
-			htmLogger.Printf("\tAdapt prediction for cell %04d", c.CellId(c.learning))
+		if log.HtmLogger.Enabled() {
+			log.HtmLogger.Printf("\tAdapt prediction for cell %04d",
+				c.CellId(c.learning))
 		}
 		c.distal[c.learning].ApplyAll(c.active.IsSet(c.learning))
 	}
@@ -152,8 +154,9 @@ func (c *Column) LearnPrediction(state data.Bitset, minOverlap int) bool {
 		update := c.distal[cell].CreateUpdate(sIndex, state, minOverlap)
 		c.distal[cell].AddUpdate(update)
 		c.learning = cell
-		if htmLogger != nil {
-			htmLogger.Printf("\tLearning prediction %v => [%04d] (%d, %d)", update, c.CellId(cell), c.Index, cell)
+		if log.HtmLogger.Enabled() {
+			log.HtmLogger.Printf("\t(%d, %d)=%04d: Learning prediction: %v",
+				c.CellId(cell), c.Index, cell, *update)
 		}
 		return true
 	}
@@ -162,8 +165,9 @@ func (c *Column) LearnPrediction(state data.Bitset, minOverlap int) bool {
 
 func (c *Column) ConfirmPrediction(state data.Bitset) bool {
 	if c.learning >= 0 && state.IsSet(c.CellId(c.learning)) {
-		if htmLogger != nil {
-			htmLogger.Printf("\t(%d, %d)=%04d: Confirmed prediction from lPredictive(t-1)", c.Index, c.learning, c.CellId(c.learning))
+		if log.HtmLogger.Enabled() {
+			log.HtmLogger.Printf("\t(%d, %d)=%04d: Confirmed prediction.",
+				c.Index, c.learning, c.CellId(c.learning))
 		}
 		return true
 	}
@@ -171,23 +175,26 @@ func (c *Column) ConfirmPrediction(state data.Bitset) bool {
 }
 
 func (c *Column) LearnSequence(learnState data.Bitset) {
+	logEnabled := log.HtmLogger.Enabled()
 	if learnState.IsZero() {
-		// Skip learning an empty sequence.
-		if htmLogger != nil {
-			htmLogger.Printf("\tSkip learning empty sequence.")
-		}
 		// Select the learning cell, but don't increment the target.
 		c.learning = c.learningTarget
+		if logEnabled {
+			log.HtmLogger.Printf("\t(%d, %d)=%04d: skip learning empty sequence",
+				c.Index, c.learning, c.CellId(c.learning))
+		}
 		return
 	}
 	cell, sIndex, _ := c.FindBestSegment(learnState, 1, true)
 	if sIndex >= 0 {
-		if htmLogger != nil {
-			htmLogger.Printf("\t(%d, %d)=%04d: Will reinforce segment: %v", c.Index, cell, c.CellId(cell), c.distal[cell].Segment(sIndex))
+		if logEnabled {
+			log.HtmLogger.Printf("\t(%d, %d)=%04d: Will reinforce segment: %v",
+				c.Index, cell, c.CellId(cell), c.distal[cell].Segment(sIndex))
 		}
 	} else {
-		if htmLogger != nil {
-			htmLogger.Printf("\t(%d, %d)=%04d: Will learn a new segment.", c.Index, c.learningTarget, c.CellId(c.learningTarget))
+		if logEnabled {
+			log.HtmLogger.Printf("\t(%d, %d)=%04d: Will learn a new segment.",
+				c.Index, c.learningTarget, c.CellId(c.learningTarget))
 		}
 		cell = c.learningTarget
 		c.learningTarget = (c.learningTarget + 1) % c.Height()
@@ -195,8 +202,9 @@ func (c *Column) LearnSequence(learnState data.Bitset) {
 	}
 	c.learning = cell
 	update := c.distal[cell].CreateUpdate(sIndex, learnState, 1)
-	if htmLogger != nil {
-		htmLogger.Printf("\tLearning sequence %v => (%d, %d)=%04d", update, c.Index, cell, c.CellId(cell))
+	if logEnabled {
+		log.HtmLogger.Printf("\tLearning sequence %v => (%d, %d)=%04d",
+			update, c.Index, cell, c.CellId(cell))
 	}
 	c.distal[cell].Apply(update, true)
 }

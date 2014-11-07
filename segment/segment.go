@@ -5,6 +5,7 @@ package segment
 import "fmt"
 import "bytes"
 import "github.com/dukejeffrie/htm/data"
+import "github.com/dukejeffrie/htm/log"
 import "math/rand"
 
 var segmentSource = rand.NewSource(304050)
@@ -190,8 +191,6 @@ func (g *DistalSegmentGroup) Apply(update *SegmentUpdate, positive bool) {
 			// TODO(tms): trim segments.
 		}
 	}
-	/* TODO(tms): restore logger.
-	if htmLogger != nil {
-		htmLogger.Printf("\t\tAfter reinforcement (positive=%t) => %v", positive, *s.PermanenceMap)
-	}*/
+	log.HtmLogger.Printf("\t\tAfter reinforcement (positive=%t) => %v",
+		positive, *s.PermanenceMap)
 }
