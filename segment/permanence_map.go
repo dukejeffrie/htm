@@ -54,9 +54,10 @@ func init() {
 
 // PermanenceMap structure.
 type PermanenceMap struct {
-	config     PermanenceConfiguration
-	permanence map[int]float32
-	synapses   *data.Bitset
+	config         PermanenceConfiguration
+	permanence     map[int]float32
+	synapses       *data.Bitset
+	receptiveField *data.Bitset
 }
 
 func (pm PermanenceMap) Config() PermanenceConfiguration {
@@ -65,9 +66,10 @@ func (pm PermanenceMap) Config() PermanenceConfiguration {
 
 func NewPermanenceMap(numBits int) *PermanenceMap {
 	result := &PermanenceMap{
-		config:     DefaultPermanenceConfig,
-		permanence: make(map[int]float32),
-		synapses:   data.NewBitset(numBits),
+		config:         DefaultPermanenceConfig,
+		permanence:     make(map[int]float32),
+		synapses:       data.NewBitset(numBits),
+		receptiveField: data.NewBitset(numBits),
 	}
 	return result
 }
@@ -92,6 +94,7 @@ func (pm *PermanenceMap) Reset(connected ...int) {
 		pm.permanence[v] = pm.config.Initial
 	}
 	pm.synapses.Set(connected...)
+	pm.receptiveField.ResetTo(*pm.synapses)
 }
 
 func (pm PermanenceMap) Len() int {
@@ -111,10 +114,12 @@ func (pm *PermanenceMap) Set(k int, v float32) {
 	}
 	if v < pm.config.Minimum {
 		pm.synapses.Unset(k)
+		pm.receptiveField.Unset(k)
 		delete(pm.permanence, k)
 		return
 	}
 	pm.permanence[k] = v
+	pm.receptiveField.Set(k)
 	if v >= pm.config.Threshold {
 		pm.synapses.Set(k)
 	} else {
@@ -123,26 +128,23 @@ func (pm *PermanenceMap) Set(k int, v float32) {
 }
 
 func (pm PermanenceMap) String() string {
-	return fmt.Sprintf("(%d connected, %+v)", pm.synapses.NumSetBits(), pm.permanence)
+	return fmt.Sprintf("(%d/%dconnected, %+v)",
+		pm.synapses.NumSetBits(),
+		pm.receptiveField.NumSetBits(),
+		pm.permanence)
 }
 
 func (pm PermanenceMap) Connected() data.Bitset {
 	return *pm.synapses
 }
 
+func (pm PermanenceMap) ReceptiveField() data.Bitset {
+	return *pm.receptiveField
+}
+
 func (pm PermanenceMap) Overlap(input data.Bitset, weak bool) int {
 	if weak {
-		max := input.NumSetBits()
-		count := 0
-		for k, _ := range pm.permanence {
-			if input.IsSet(k) {
-				count++
-				if count >= max {
-					break
-				}
-			}
-		}
-		return count
+		return pm.receptiveField.Overlap(input)
 	} else {
 		return pm.synapses.Overlap(input)
 	}

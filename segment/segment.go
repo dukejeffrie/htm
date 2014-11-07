@@ -57,14 +57,15 @@ func (ds *DendriteSegment) broaden(input data.Bitset, minOverlap int) (overlapCo
 	if newPermanence > threshold {
 		newPermanence = threshold
 	}
-	input.Foreach(func(k int) {
+	newSynapses := input.Clone()
+	newSynapses.AndNot(ds.ReceptiveField())
+	newSynapses.Foreach(func(k int) {
 		v := ds.Get(k)
 		if v < newPermanence {
 			ds.Set(k, newPermanence)
-		} else if v >= threshold {
-			overlapCount++
 		}
 	})
+	overlapCount = input.Overlap(ds.Connected())
 	ds.overlapHistory.Record(overlapCount >= minOverlap)
 	if avg, ok := ds.overlapHistory.Average(); ok && avg < ds.MinActivityRatio {
 		for k, v := range ds.permanence {
@@ -121,10 +122,10 @@ func NewDistalSegmentGroup() *DistalSegmentGroup {
 
 func (g DistalSegmentGroup) ComputeActive(activeState data.Bitset, minOverlap int, weak bool) (resultIndex, resultOverlap int) {
 	resultIndex = -1
-	resultOverlap = -1
+	resultOverlap = minOverlap - 1
 	hasSequence := false
 	for i, s := range g.segments {
-		if overlap := s.Overlap(activeState, weak); overlap >= minOverlap {
+		if overlap := s.Overlap(activeState, weak); overlap > resultOverlap {
 			if overlap > resultOverlap && (!hasSequence || s.sequence) {
 				resultIndex = i
 				resultOverlap = overlap
