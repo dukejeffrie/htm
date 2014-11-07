@@ -48,6 +48,6 @@ func (ch CycleHistory) Average() (result float32, ok bool) {
 		return
 	}
 	ok = true
-	result = float32(ch.events.NumSetBits()) / float32(l)
+	result = float32(ch.events.DenseCount()) / float32(l)
 	return
 }

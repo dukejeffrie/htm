@@ -32,8 +32,8 @@ func NewDendriteSegment(numBits int) *DendriteSegment {
 		PermanenceMap:     NewPermanenceMap(numBits),
 		MinActivityRatio:  0.02,
 		Boost:             0,
-		overlapHistory:    data.NewCycleHistory(100),
-		activationHistory: data.NewCycleHistory(100),
+		overlapHistory:    data.NewCycleHistory(1000),
+		activationHistory: data.NewCycleHistory(1000),
 	}
 	return ds
 }
@@ -52,6 +52,7 @@ func (ds *DendriteSegment) Learn(input data.Bitset, active bool, minOverlap int)
 }
 
 func (ds *DendriteSegment) broaden(input data.Bitset, minOverlap int) (overlapCount int) {
+	overlapCount = input.Overlap(ds.Connected())
 	threshold := ds.Config().Threshold
 	newPermanence := ds.Config().Minimum + ds.Boost
 	if newPermanence > threshold {
@@ -65,7 +66,6 @@ func (ds *DendriteSegment) broaden(input data.Bitset, minOverlap int) (overlapCo
 			ds.Set(k, newPermanence)
 		}
 	})
-	overlapCount = input.Overlap(ds.Connected())
 	ds.overlapHistory.Record(overlapCount >= minOverlap)
 	if avg, ok := ds.overlapHistory.Average(); ok && avg < ds.MinActivityRatio {
 		for k, v := range ds.permanence {
