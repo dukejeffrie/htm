@@ -138,7 +138,7 @@ func (c Column) CellId(i int) int {
 }
 
 func (c *Column) AdaptSegments() {
-	if c.learning >= 0 && c.distal[c.learning].HasUpdates() {
+	if c.learning >= 0 {
 		if htmLogger != nil {
 			htmLogger.Printf("\tAdapt prediction for cell %04d", c.CellId(c.learning))
 		}
