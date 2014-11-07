@@ -36,3 +36,28 @@ func TestCycleHistory(t *testing.T) {
 		t.Errorf("Should be %f average: %f, ok=%t, %v", 0.1, avg, ok, ch)
 	}
 }
+
+func CycleAverageBenchmarkTemplate(b *testing.B, length, step int) {
+	ch := NewCycleHistory(length)
+	for i := 0; i < length; i++ {
+		ch.Record(step%length == 0)
+	}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		ch.Record(i%length == 0)
+		ch.Average()
+	}
+}
+
+func BenchmarkAverage2(b *testing.B) {
+	CycleAverageBenchmarkTemplate(b, 1000, 2)
+}
+func BenchmarkAverage10(b *testing.B) {
+	CycleAverageBenchmarkTemplate(b, 1000, 10)
+}
+func BenchmarkAverage100(b *testing.B) {
+	CycleAverageBenchmarkTemplate(b, 1000, 100)
+}
+func BenchmarkAverage1000(b *testing.B) {
+	CycleAverageBenchmarkTemplate(b, 1000, 503)
+}

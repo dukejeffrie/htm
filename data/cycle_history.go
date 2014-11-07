@@ -39,10 +39,15 @@ func (ch *CycleHistory) Record(event bool) {
 //
 // Currently, the only reason for ok to be false is when no event has ever been
 // recorded.
-func (ch CycleHistory) Average() (float32, bool) {
+func (ch CycleHistory) Average() (result float32, ok bool) {
 	l := ch.events.Len()
 	if ch.cycle < 0 {
 		l += ch.cycle
 	}
-	return float32(ch.events.NumSetBits()) / float32(l), l != 0
+	if l == 0 {
+		return
+	}
+	ok = true
+	result = float32(ch.events.NumSetBits()) / float32(l)
+	return
 }
