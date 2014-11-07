@@ -51,13 +51,12 @@ func (ds *DendriteSegment) Learn(input data.Bitset, active bool, minOverlap int)
 	}
 }
 
-func (ds *DendriteSegment) broaden(input data.Bitset, minOverlap int) {
+func (ds *DendriteSegment) broaden(input data.Bitset, minOverlap int) (overlapCount int) {
 	threshold := ds.Config().Threshold
 	newPermanence := ds.Config().Minimum + ds.Boost
 	if newPermanence > threshold {
 		newPermanence = threshold
 	}
-	overlapCount := 0
 	input.Foreach(func(k int) {
 		v := ds.Get(k)
 		if v < newPermanence {
@@ -72,6 +71,7 @@ func (ds *DendriteSegment) broaden(input data.Bitset, minOverlap int) {
 			ds.Set(k, v*1.01)
 		}
 	}
+	return
 }
 
 type DistalSegment struct {

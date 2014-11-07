@@ -24,15 +24,16 @@ func TestBroadenSynapses(t *testing.T) {
 	input.Set(1, 5, 22)
 	for i := 0; i < 1000 && ds.permanence[3] >= ds.Config().Minimum; i++ {
 		ds.narrow(*input)
-		t.Log(ds)
 	}
 	if ds.permanence[22] != 0 {
 		t.Errorf("Permanence for non-connected should be zero: %v", ds.permanence)
 	}
 	input.Reset()
 	input.Set(1, 8, 22)
-	ds.broaden(*input, 0)
-	t.Log(ds)
+	overlap := ds.broaden(*input, 0)
+	if overlap != 1 {
+		t.Errorf("Only bit 1 should overlap, not %d: %v", overlap, *ds)
+	}
 	if ds.permanence[1] <= ds.permanence[3] {
 		t.Errorf("Permanence scores did not improve: %v", ds.permanence)
 	}
@@ -45,12 +46,21 @@ func TestBroadenSynapses(t *testing.T) {
 }
 
 func BenchmarkBroadenSynapses(b *testing.B) {
-	ds := NewDendriteSegment(64)
-	ds.Reset(1, 3, 5, 8, 13)
-	input := data.NewBitset(64)
-	input.Set(1, 5, 22)
+	ds := NewDendriteSegment(2048)
+	ds.Reset(1, 3, 50, 800, 2013)
+	input := data.NewBitset(2048)
+	input.Set(1, 50, 2222)
+	for i := 0; i < 1000 && ds.permanence[3] >= ds.Config().Minimum; i++ {
+		ds.narrow(*input)
+	}
+	input.Reset()
+	input.Set(1, 50, 800, 2013, 2222)
+
+	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		ds.broaden(*input, 0)
+		input.Set(i % 2048)
+		ds.broaden(*input, 1)
+		input.Unset(i % 2048)
 	}
 }
 
