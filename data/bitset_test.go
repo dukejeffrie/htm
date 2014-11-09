@@ -292,7 +292,8 @@ func TestIndexing(t *testing.T) {
 }
 
 func TestIteration(t *testing.T) {
-	b := NewBitset(2048).Set(1, 33, 63, 64, 2000)
+	bits := []int{1, 33, 63, 64, 2000}
+	b := NewBitset(2048).Set(bits...)
 	dest := make([]int, b.NumSetBits())
 	d := 0
 	b.Foreach(func(i int) {
@@ -302,6 +303,17 @@ func TestIteration(t *testing.T) {
 	other := NewBitset(2048).Set(dest...)
 	if !other.Equals(*b) {
 		t.Errorf("Iterator failed. Expected: %v, but got: %v", *b, *other)
+	}
+	last := -1
+	for i, b := range dest {
+		if b <= last {
+			t.Errorf("Bits must come in ascending order: %v@%d <= %v@%d",
+				b, i, last, i-1)
+		}
+		last = b
+		if b != bits[i] {
+			t.Errorf("Should be exactly %d@%d in bits, but is: %d", bits[i], i, b)
+		}
 	}
 }
 

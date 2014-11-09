@@ -56,6 +56,24 @@ func (b Bitset) Foreach(f func(int)) {
 	}
 }
 
+// Iterates through the true indices in this bitset until it finds an index that
+// satisfies f(). Return that index. If f(x) return false for all x, this method
+// return b.Len().
+func (b Bitset) Any(f func(int) bool) int {
+	base := 0
+	for pos, el := range b.binary {
+		base = pos * 64
+		for el > 0 {
+			val := base + deBrujin64Table[((el&-el)*deBrujin64)>>58]
+			if f(val) {
+				return val
+			}
+			el &= el - 1
+		}
+	}
+	return b.Len()
+}
+
 func (b Bitset) Overlap(other Bitset) int {
 	// This algorithm behaves well only when the number of set bits is small.
 	count := 0
@@ -126,9 +144,9 @@ func (b *Bitset) Set(indices ...int) *Bitset {
 }
 
 // Sets all bits in the interval [start, end).
-func (b *Bitset) SetRange(start, end int) {
+func (b *Bitset) SetRange(start, end int) *Bitset {
 	if end <= start {
-		return
+		return b
 	}
 	if start < 0 {
 		panic(fmt.Errorf(
@@ -142,7 +160,7 @@ func (b *Bitset) SetRange(start, end int) {
 	for pos < len(b.binary) {
 		minIdx, maxIdx := pos*64, (pos+1)*64
 		if end <= minIdx {
-			return
+			return b
 		}
 		mask := ^uint64(0)
 		if start > minIdx {
@@ -154,6 +172,7 @@ func (b *Bitset) SetRange(start, end int) {
 		b.binary[pos] |= mask
 		pos++
 	}
+	return b
 }
 
 func (b *Bitset) Unset(indices ...int) *Bitset {
@@ -290,4 +309,20 @@ func (b Bitset) Clone() *Bitset {
 	copy(result.binary, b.binary)
 	result.length = b.length
 	return result
+}
+
+// A bitset encoder.
+type Encoder interface {
+	// Encodes a value as a bitset. If the value cannot be encoded, returns an error.
+	Encode(value interface{}) error
+
+	// Gets the last successfully encoded value.
+	Get() Bitset
+}
+
+// A bitset decoder.
+type Decoder interface {
+	// Decodes the bitset into a value in the original domain. The value may or may
+	// not reflect precisely the encoded value (e.g. due to loss of precision)
+	Decode(bits Bitset) interface{}
 }

@@ -4,6 +4,7 @@ package test
 
 import "github.com/dukejeffrie/htm"
 import "github.com/dukejeffrie/htm/data"
+import "github.com/dukejeffrie/htm/input"
 import "github.com/dukejeffrie/htm/log"
 
 import "fmt"
@@ -13,10 +14,9 @@ import "os"
 import "testing"
 
 type Drop struct {
-	Running         bool
-	Input           htm.InputSource
 	Output          io.Writer
-	rawInput        []*htm.RawInput
+	rawInput        []int
+	Sensor          *input.ScalarSensor
 	region0         *htm.Region
 	region1         *htm.Region
 	region2         *htm.Region
@@ -29,19 +29,11 @@ type Drop struct {
 }
 
 func (d *Drop) Generate() {
-	d.rawInput = make([]*htm.RawInput, 10)
-	max := 100 * len(d.rawInput) * len(d.rawInput)
+	d.rawInput = make([]int, 100)
+	delta := int(d.Sensor.MaxValue - 0.1 - d.Sensor.MinValue)
 	for i := 1; i <= len(d.rawInput); i++ {
 		den := i * i
-		d.rawInput[i-1] = &htm.RawInput{
-			Name:     fmt.Sprintf("%d", max/den),
-			IntValue: max / den,
-		}
-	}
-	n := 0
-	for d.Running {
-		d.Input.Source <- d.rawInput[n]
-		n = (n + 1) % len(d.rawInput)
+		d.rawInput[i-1] = int(d.Sensor.MinValue) + delta/den
 	}
 }
 
@@ -56,7 +48,6 @@ func (d *Drop) InitializeNetwork() {
 	}
 	params.MaximumFiringColumns = params.Width / 50
 	d.step = 0
-	d.predicted = data.NewBitset(params.InputLength)
 	d.region0 = htm.NewRegion(params)
 	d.region0.RandomizeColumns(params.InputLength / 2)
 
@@ -75,6 +66,7 @@ func (d *Drop) InitializeNetwork() {
 	params.MaximumFiringColumns = 1
 	d.region3 = htm.NewRegion(params)
 	d.region3.RandomizeColumns(params.InputLength / 2)
+	d.predicted = data.NewBitset(d.region3.PredictiveState().Len())
 	d.patterns = make(map[string]string)
 }
 
@@ -84,6 +76,7 @@ func (d *Drop) SetLearning(learning bool) {
 	//d.region2.Learning = false
 	d.region3.Learning = false
 	log.HtmLogger.Print("Learning = false")
+	fmt.Fprintf(d.Output, "\nLearning = %t\n", false)
 }
 
 func (d *Drop) AddNoise() {
@@ -96,20 +89,20 @@ func (d *Drop) AddNoise() {
 }
 
 func (d *Drop) Step() (recognized int) {
-	d.step++
-	input, err := d.Input.Next()
+	idx := d.step % len(d.rawInput)
+	err := d.Sensor.Encode(d.rawInput[idx])
 	if err != nil {
-		d.t.Error(err)
-		d.Running = false
+		d.t.Fatal(err)
 		return
 	}
+	d.step++
 
 	recognized = 0
 	//input.Value.Print(16, d.Output)
-	d.region0.ConsumeInput(input.Value)
+	d.region0.ConsumeInput(d.Sensor.Get())
 	d.region1.ConsumeInput(d.region0.Output())
 	d.region3.ConsumeInput(d.region1.Output())
-	fmt.Fprintf(d.Output, "\n%d) Input(%s) = %v", d.step, input.Name, input.Value)
+	fmt.Fprintf(d.Output, "\n%d) Input(%v) = %v", d.step, d.Sensor.Raw(), d.Sensor.Get())
 	if d.predicted.IsZero() {
 		recognized = -1
 		fmt.Fprintf(d.Output, ", new: %v", d.region3.ActiveState())
@@ -120,7 +113,7 @@ func (d *Drop) Step() (recognized int) {
 		fmt.Fprintf(d.Output, ", missed (expected = %v, got: %v)", *d.predicted, d.region3.ActiveState())
 		recognized = 0
 	}
-	d.predicted = d.region3.PredictiveState().Clone()
+	d.predicted.ResetTo(d.region3.PredictiveState())
 	return
 }
 
@@ -129,12 +122,11 @@ func TestDrop(t *testing.T) {
 		t.SkipNow()
 	}
 	log.HtmLogger.SetEnabled(true)
-	dec, err := htm.NewScalarDecoder(64, 2, 0, 12000)
+	dec, err := input.NewScalarSensor(64, 2, 0, 1200000)
 	if err != nil {
 		t.Error(err)
 		t.FailNow()
 	}
-	src := htm.NewInputSource("Drop", dec)
 	out, err := os.Create("drop_output.txt")
 	if err != nil {
 		t.Error(err)
@@ -142,21 +134,20 @@ func TestDrop(t *testing.T) {
 	}
 
 	drop := Drop{
-		Running: true,
-		Input:   src,
-		Output:  out,
-		t:       t}
+		Sensor: dec,
+		Output: out,
+		t:      t}
 	drop.InitializeNetwork()
 	fmt.Printf("%+v\n%+v\n%+v\n",
 		drop.region0.RegionParameters,
 		drop.region1.RegionParameters,
 		drop.region3.RegionParameters)
 
-	go drop.Generate()
+	drop.Generate()
 	lastLearned := 0
 	numRecognized := 0
 	drop.LearnQuietUntil = 100
-	for numRecognized < 20 && drop.step-lastLearned < 1000 && drop.step < 1000000 {
+	for numRecognized < 40 && drop.step-lastLearned < 1000 && drop.step < 10000 {
 		recognized := drop.Step()
 		if recognized == 1 {
 			numRecognized++
