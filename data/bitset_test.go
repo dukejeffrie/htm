@@ -210,13 +210,29 @@ func TestBitsetOr_DifferentLength(t *testing.T) {
 }
 
 func TestSetAfterLength(t *testing.T) {
-	b := NewBitset(60)
-	b.Set(61, 62, 63)
-	ExpectEquals(t, "after-length bits not set", 0, b.NumSetBits())
+	defer func() {
+		err := recover()
+		if err == nil {
+			t.Error("Should have panicked, but didn't.")
+		} else if !strings.Contains(fmt.Sprint(err), "past end") {
+			t.Error("Unexpected error:", err)
+		}
+	}()
 
-	b.SetRange(59, 70)
-	ExpectEquals(t, "overflowing range bits not set", 1, b.NumSetBits())
-	ExpectEquals(t, "bit 59", true, b.IsSet(59))
+	NewBitset(60).Set(61, 62, 63)
+}
+
+func TestSetBeforeStart(t *testing.T) {
+	defer func() {
+		err := recover()
+		if err == nil {
+			t.Error("Should have panicked, but didn't.")
+		} else if !strings.Contains(fmt.Sprint(err), "before start") {
+			t.Error("Unexpected error:", err)
+		}
+	}()
+
+	NewBitset(60).Set(-1)
 }
 
 func TestSetRange(t *testing.T) {
@@ -232,6 +248,31 @@ func TestSetRange(t *testing.T) {
 	for i := 8; i < 154; i++ {
 		ExpectEquals(t, fmt.Sprintf("bit %d", i), true, b.IsSet(i))
 	}
+}
+
+func TestSetRange_AfterLength(t *testing.T) {
+	defer func() {
+		err := recover()
+		if err == nil {
+			t.Error("Should have panicked, but didn't.")
+		} else if !strings.Contains(fmt.Sprint(err), "past end") {
+			t.Error("Unexpected error:", err)
+		}
+	}()
+	NewBitset(2048).SetRange(2000, 2049)
+}
+
+func TestSetRange_BeforeStart(t *testing.T) {
+	defer func() {
+		err := recover()
+		if err == nil {
+			t.Error("Should have panicked, but didn't.")
+		} else if !strings.Contains(fmt.Sprint(err), "before start") {
+			t.Error("Unexpected error:", err)
+		}
+	}()
+
+	NewBitset(60).SetRange(-1, 0)
 }
 
 func TestIndexing(t *testing.T) {

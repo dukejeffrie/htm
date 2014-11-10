@@ -111,9 +111,16 @@ func (b *Bitset) Reset() *Bitset {
 
 func (b *Bitset) Set(indices ...int) *Bitset {
 	for _, v := range indices {
-		if v >= 0 && v < b.length {
-			b.binary[v/64] |= 1 << uint64(v%64)
+		if v >= b.length {
+			panic(fmt.Errorf(
+				"Attempt to write past end of bitset (%d > %d)", v, b.length))
 		}
+		if v < 0 {
+			panic(fmt.Errorf(
+				"Attempt to write before start of bitset (%d < %d)", v, 0))
+		}
+
+		b.binary[v/64] |= 1 << uint64(v%64)
 	}
 	return b
 }
@@ -123,8 +130,13 @@ func (b *Bitset) SetRange(start, end int) {
 	if end <= start {
 		return
 	}
+	if start < 0 {
+		panic(fmt.Errorf(
+			"Attempt to write before start of bitset (%d < %d)", start, 0))
+	}
 	if end > b.length {
-		end = b.length
+		panic(fmt.Errorf(
+			"Attempt to write past end of bitset (%d > %d)", end, b.length))
 	}
 	pos := start / 64
 	for pos < len(b.binary) {

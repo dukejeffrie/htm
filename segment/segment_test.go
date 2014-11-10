@@ -49,12 +49,12 @@ func BenchmarkBroadenSynapses(b *testing.B) {
 	ds := NewDendriteSegment(2048)
 	ds.Reset(1, 3, 50, 800, 2013)
 	input := data.NewBitset(2048)
-	input.Set(1, 50, 2222)
+	input.Set(1, 50, 2047)
 	for i := 0; i < 1000 && ds.permanence[3] >= ds.Config().Minimum; i++ {
 		ds.narrow(*input)
 	}
 	input.Reset()
-	input.Set(1, 50, 800, 2013, 2222)
+	input.Set(1, 50, 800, 2013, 2047)
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
