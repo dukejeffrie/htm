@@ -126,6 +126,9 @@ func (tp *TpTest) PrintRegion(r htm.Region, columns ...int) {
 }
 
 func TestTp_LearnAAB(t *testing.T) {
+	if testing.Short() {
+		t.SkipNow()
+	}
 	test := NewTpTest(t)
 	test.Verify = false
 	for i := 0; i < 100; i++ {
@@ -162,6 +165,9 @@ func BenchmarkTp_AAB(b *testing.B) {
 }
 
 func TestTp_AAxB(t *testing.T) {
+	if testing.Short() {
+		t.SkipNow()
+	}
 	test := NewTpTest(t)
 	test.Verify = false
 	random := data.NewBitset(test.layer0.InputLength)
@@ -195,6 +201,9 @@ func TestTp_AAxB(t *testing.T) {
 }
 
 func TestTp_LearnA2B_Step(t *testing.T) {
+	if testing.Short() {
+		t.SkipNow()
+	}
 	test := NewTpTest(t)
 
 	// Show A, burst column 1.

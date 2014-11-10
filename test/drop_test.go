@@ -125,6 +125,9 @@ func (d *Drop) Step() (recognized int) {
 }
 
 func TestDrop(t *testing.T) {
+	if testing.Short() {
+		t.SkipNow()
+	}
 	log.HtmLogger.SetEnabled(true)
 	dec, err := htm.NewScalarDecoder(64, 2, 0, 12000)
 	if err != nil {

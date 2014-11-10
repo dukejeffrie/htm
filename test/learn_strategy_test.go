@@ -33,6 +33,9 @@ func TryToLearn(t *testing.T, maxTries int, ds *segment.DendriteSegment,
 }
 
 func TestLearn64PatternA_5(t *testing.T) {
+	if testing.Short() {
+		t.SkipNow()
+	}
 	rand.Seed(1979)
 	ds := segment.NewDendriteSegment(64)
 	ds.Reset(1, 3, 5, 8, 13, 21)
@@ -43,6 +46,9 @@ func TestLearn64PatternA_5(t *testing.T) {
 }
 
 func TestLearn64PatternAB_5(t *testing.T) {
+	if testing.Short() {
+		t.SkipNow()
+	}
 	rand.Seed(1979)
 	ds := segment.NewDendriteSegment(64)
 	ds.Reset(1, 3, 5, 8, 13, 21)
@@ -55,6 +61,9 @@ func TestLearn64PatternAB_5(t *testing.T) {
 }
 
 func TestLearn64PatternABC_5(t *testing.T) {
+	if testing.Short() {
+		t.SkipNow()
+	}
 	rand.Seed(1979)
 	ds := segment.NewDendriteSegment(64)
 	ds.Reset(1, 3, 5, 8, 13, 21)
