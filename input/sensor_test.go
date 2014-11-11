@@ -156,3 +156,45 @@ func TestCategoryEncoder(t *testing.T) {
 		t.Error("Should have failed to encode unknown category \"Other\":", *s)
 	}
 }
+
+func TestPeriodicEncoder(t *testing.T) {
+	// Monday to Sunday.
+	mo, tu, we, th, fr, sa, su := 1, 2, 3, 4, 5, 6, 7
+	week := []int{mo, tu, we, th, fr, sa, su}
+	s, err := NewPeriodicSensor(64, mo, su)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, day := range week {
+		if err = s.Encode(day); err != nil {
+			t.Error("Could not encode day: ", day, ", error: ", err)
+		}
+	}
+	if t.Failed() {
+		return
+	}
+	s.Encode(mo)
+	eMo := s.Get().Clone()
+	if eMo.NumSetBits() != s.W {
+		t.Errorf("Should have %d bits set, but has %d.", s.W, eMo.NumSetBits())
+	}
+	if mo != s.Decode(*eMo) {
+		t.Errorf("Decode failed, expected %d but got: %d (%v)", mo, s.Decode(*eMo), *s)
+	}
+	eTu := data.NewBitset(s.N)
+	eMo.Foreach(func(i int) {
+		eTu.Set((i + 1) % (su - mo))
+	})
+	if tu != s.Decode(*eTu) {
+		t.Errorf("Decode(%v) failed, expected %d but got: %d (%v)", eTu, tu, s.Decode(*eTu), *s)
+	}
+
+	s.Encode(su)
+	eSu := s.Get().Clone()
+	if eSu.Overlap(*eMo) != 2 {
+		t.Errorf("Sunday(%v) and Monday(%v) should overlap on two bits.", eSu, eMo)
+	}
+	if eSu.Overlap(*eTu) != 1 {
+		t.Errorf("Sunday(%v) and Monday(%v) should overlap on one bit.", eSu, eTu)
+	}
+}

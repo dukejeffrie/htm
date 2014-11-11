@@ -147,3 +147,63 @@ func NewCategorySensor(n, w int, categories ...string) (*CategorySensor, error) 
 	}
 	return result, nil
 }
+
+type PeriodicSensor struct {
+	*Sensor
+	First int
+	Last  int
+}
+
+func NewPeriodicSensor(n, first, last int) (*PeriodicSensor, error) {
+	if last <= first {
+		return nil, fmt.Errorf("Last (%d) cannot be less than first (%d)", last, first)
+	}
+	w := 3
+	if n-w < last-first {
+		return nil, fmt.Errorf("Cannot fit %d (last-first) states into %d bits (n=%d, w=%d).",
+			last-first, n-w, n, w)
+	}
+	result := &PeriodicSensor{
+		Sensor: NewSensor(n, w),
+		First:  first,
+		Last:   last,
+	}
+	return result, nil
+}
+
+func (s *PeriodicSensor) Encode(value interface{}) error {
+	s.input = value
+	s.value.Reset()
+	switch value := value.(type) {
+	case int:
+		return s.EncodeInt(value)
+	default:
+		return fmt.Errorf("Cannot encode values of type %T (%v).", value, value)
+	}
+}
+
+func (s *PeriodicSensor) Decode(bits data.Bitset) interface{} {
+	found := bits.Any(func(int) bool {
+		return true
+	})
+	if bits.IsSet(found + 2) {
+		return found + 1 + s.First
+	} else if bits.IsSet(found + 1) {
+		// found is the center bit, so first.
+		return s.First
+	} else {
+		// found is center bit + 1, so last.
+		return s.Last
+	}
+}
+
+func (s *PeriodicSensor) EncodeInt(value int) error {
+	if value < s.First || value > s.Last {
+		return fmt.Errorf("Precondition failed: min (%d) <= value (%d) < max (%d).",
+			s.First, value, s.Last)
+	}
+	centerBit := value - s.First
+	sz := s.Last - s.First
+	s.value.Set((centerBit-1+sz)%sz, centerBit, (centerBit+1)%sz)
+	return nil
+}
